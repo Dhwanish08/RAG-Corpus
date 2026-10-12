@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GenAI Project Ideas</title>
+<style>
+  @page { size: A4; margin: 16mm 18mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #1a1a1a;
+    font-size: 10.5pt;
+    line-height: 1.45;
+    margin: 0;
+  }
+  h1, h2, h3, .chip, th, .label {
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  h1 { font-size: 20pt; margin: 0 0 4pt 0; }
+  h2 { font-size: 13pt; margin: 22pt 0 8pt 0; border-bottom: 2px solid #222; padding-bottom: 3pt; }
+  h3 { font-size: 11.5pt; margin: 0 0 4pt 0; }
+  .subtitle { font-size: 10pt; color: #555; margin-bottom: 10pt; }
+  .cover-box {
+    border: 1.5px solid #222; border-radius: 4px; padding: 10pt 14pt;
+    margin: 10pt 0 16pt 0; background: #f7f6f2;
+  }
+  .cover-box ul { margin: 4pt 0 0 0; padding-left: 18pt; }
+  .cover-box li { margin-bottom: 2pt; }
+  .meta { font-size: 9pt; color: #666; margin-top: 6pt; }
+  table { width: 100%; border-collapse: collapse; margin: 8pt 0 14pt 0; font-size: 9.3pt; }
+  th { background: #222; color: #fff; text-align: left; padding: 5pt 6pt; }
+  td { padding: 4.5pt 6pt; border-bottom: 1px solid #ddd; vertical-align: top; }
+  tr:nth-child(even) td { background: #f2f1ec; }
+  .num { text-align: center; font-weight: bold; }
+  .flag-yes { color: #1a7a1a; font-weight: bold; }
+  .flag-no { color: #b00; font-weight: bold; }
+  .card {
+    border: 1px solid #bbb; border-radius: 4px; padding: 10pt 12pt;
+    margin-bottom: 10pt; page-break-inside: avoid; background: #fff;
+  }
+  .card.appendix { background: #f7f2f2; border-color: #d9b8b8; }
+  .ratings { font-size: 9pt; margin: 3pt 0 6pt 0; }
+  .chip {
+    display: inline-block; background: #222; color: #fff; border-radius: 3px;
+    padding: 1.5pt 6pt; margin-right: 5pt; font-size: 8.5pt; font-weight: 600;
+  }
+  .chip.ok { background: #1a7a1a; }
+  .chip.bad { background: #b00; }
+  .row-label { font-weight: bold; font-size: 9pt; color: #444; }
+  .field { margin: 3pt 0; }
+  .field b { font-size: 9pt; color: #333; }
+  .weakness { font-style: italic; color: #6a4a00; }
+  .shortlist-item { border-left: 4px solid #1a7a1a; padding-left: 8pt; margin-bottom: 8pt; }
+  .note { font-size: 8.7pt; color: #666; margin-top: 4pt; }
+  .section-intro { font-size: 9.7pt; color: #444; margin-bottom: 8pt; }
+  .divider { border: none; border-top: 1px solid #ccc; margin: 14pt 0; }
+  .chip.demo { background: #8a5a00; }
+  .tier { margin-bottom: 12pt; page-break-inside: avoid; }
+  .tier h3 { margin-bottom: 3pt; }
+  .tier-list { margin: 3pt 0 0 0; padding-left: 16pt; }
+  .tier-list li { margin-bottom: 4pt; }
+  .callout {
+    border: 1.5px solid #8a5a00; border-radius: 4px; padding: 10pt 14pt;
+    margin: 12pt 0; background: #fbf4e6;
+  }
+  .callout h3 { margin-top: 0; color: #6a4500; }
+  .callout ul { margin: 4pt 0 0 0; padding-left: 18pt; }
+  .callout li { margin-bottom: 3pt; }
+  .demote { border-left: 4px solid #999; padding-left: 8pt; margin-bottom: 8pt; background: #f5f5f5; padding-top: 4pt; padding-bottom: 4pt; }
+</style>
+</head>
+<body>
+
+<h1>Generative AI Course Project — Ranked Idea Compendium</h1>
+<div class="subtitle">Semester 7 B.Tech · Prepared 2026-09-14</div>
+
+<div class="cover-box">
+  <div class="label" style="font-weight:bold;">Constraints locked in for this list</div>
+  <ul>
+    <li>Medium&ndash;hard difficulty, resume-worthy &mdash; not a beginner project</li>
+    <li>Text / LLM only &mdash; no image-based work</li>
+    <li>No readymade datasets &mdash; the dataset must be self-collected</li>
+    <li>Hardware: Colab free / Kaggle tier &mdash; T4 GPU, 16GB VRAM, session disconnects</li>
+    <li>Graded by a <b>live demo to a panel of judges</b></li>
+  </ul>
+  <div class="meta">20 ideas surveyed across four rounds of narrowing. Ideas that violate a constraint are kept for completeness in the Appendix, clearly flagged &mdash; not silently dropped.</div>
+</div>
+
+<h2>How to read this</h2>
+<div class="section-intro">
+  Three independent 1&ndash;5 ratings per idea. <b>Complexity</b> = engineering + conceptual difficulty at your
+  hardware tier. <b>Resume value</b> = how much it stands out in a screening pass and survives a follow-up
+  question in an interview. <b>Demo value</b> = how well it lands in a live run in front of judges &mdash;
+  panels reward <i>visible contrast</i> (baseline fails, yours succeeds, understood in five seconds without
+  reading a chart), not output quality and not implementation sophistication. Demo value is orthogonal to
+  the other two and can invert them: D1 rates highest for resume value and lowest for demo value &mdash; its
+  output is visibly weak, and a panel grades what it sees. Three compliance flags per idea: text-only,
+  self-collected data, T4-feasible. All three checked = fully compliant with your current constraints.
+</div>
+
+<h2>Table A &mdash; Ranked by Complexity</h2>
+<table>
+<tr><th>#</th><th>Idea</th><th>Complexity</th><th>Resume</th><th>Demo</th><th>Text-only</th><th>Self-collected</th><th>T4-OK</th></tr>
+<tr><td>D1</td><td>Discrete text diffusion vs. AR twin</td><td class="num">5</td><td class="num">5</td><td class="num">2</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓*</td></tr>
+<tr><td>A7</td><td>DPO from scratch</td><td class="num">4.5</td><td class="num">4</td><td class="num">2.5</td><td class="flag-yes">✓</td><td class="flag-no">✗</td><td class="flag-yes">✓*</td></tr>
+<tr><td>A6</td><td>Speculative decoding from scratch</td><td class="num">4.5</td><td class="num">3.5</td><td class="num">4.5</td><td class="flag-yes">✓</td><td class="flag-no">✗</td><td class="flag-yes">✓</td></tr>
+<tr><td>C1</td><td>Verified synthetic distillation</td><td class="num">4.5</td><td class="num">4.5</td><td class="num">4</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C2</td><td>Hinglish / code-mixed eval set</td><td class="num">4</td><td class="num">4.5</td><td class="num">4</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C3</td><td>GitHub code-review mining</td><td class="num">4</td><td class="num">4</td><td class="num">3</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C5</td><td>Prompt-injection corpus</td><td class="num">4</td><td class="num">4.5</td><td class="num">5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>R1</td><td>Temporal RAG (Wikipedia revisions)</td><td class="num">4</td><td class="num">5</td><td class="num">5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>R2</td><td>RAG corpus poisoning attack/defense</td><td class="num">4</td><td class="num">4.5</td><td class="num">5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>R3</td><td>Multi-hop domain RAG (self-scraped)</td><td class="num">4</td><td class="num">3.5</td><td class="num">3.5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>A2</td><td>Self-repairing code agent</td><td class="num">4</td><td class="num">4</td><td class="num">3.5</td><td class="flag-yes">✓</td><td class="flag-no">✗</td><td class="flag-yes">✓</td></tr>
+<tr><td>A4</td><td>LLM watermarking + attacks</td><td class="num">4</td><td class="num">5</td><td class="num">3.5</td><td class="flag-yes">✓</td><td class="flag-no">✗†</td><td class="flag-yes">✓</td></tr>
+<tr><td>A5</td><td>Automated red-teaming harness</td><td class="num">4</td><td class="num">4.5</td><td class="num">4</td><td class="flag-yes">✓</td><td class="flag-no">✗†</td><td class="flag-yes">✓</td></tr>
+<tr><td>A8</td><td>GraphRAG on HotpotQA</td><td class="num">4</td><td class="num">3.5</td><td class="num">3</td><td class="flag-yes">✓</td><td class="flag-no">✗†</td><td class="flag-yes">✓</td></tr>
+<tr><td>D2</td><td>Tabular diffusion + membership inference</td><td class="num">4</td><td class="num">4</td><td class="num">3</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C4</td><td>Post-cutoff hallucination benchmark</td><td class="num">3.5</td><td class="num">4</td><td class="num">3.5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C6</td><td>Cross-generator AI-text detector</td><td class="num">3.5</td><td class="num">4</td><td class="num">4.5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>A9</td><td>Self-consistency hallucination detection</td><td class="num">3.5</td><td class="num">4</td><td class="num">3</td><td class="flag-yes">✓</td><td class="flag-no">✗†</td><td class="flag-yes">✓</td></tr>
+<tr><td>B1</td><td>Image diffusion from scratch</td><td class="num">4</td><td class="num">3</td><td class="num">3</td><td class="flag-no">✗</td><td class="flag-yes">✓</td><td class="flag-no">tight</td></tr>
+<tr><td>B2</td><td>Sketch → working artifact</td><td class="num">4</td><td class="num">5</td><td class="num">4.5</td><td class="flag-no">✗</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+</table>
+<div class="note">* D1 and A7 are feasible on a free T4 only by staying small (D1: ~30&ndash;60M params; A7: QLoRA on a 3B model) &mdash; see catalogue entries.<br>
+† Marked ✗ only for the readymade dataset originally cited (C4/HotpotQA, hh-rlhf, AdvBench, TruthfulQA). Each can be rescued with a self-collected substitute &mdash; noted inline below.</div>
+
+<h2>Table B &mdash; Ranked by Resume Value</h2>
+<table>
+<tr><th>#</th><th>Idea</th><th>Resume</th><th>Complexity</th><th>Demo</th><th>Text-only</th><th>Self-collected</th><th>T4-OK</th></tr>
+<tr><td>D1</td><td>Discrete text diffusion vs. AR twin</td><td class="num">5</td><td class="num">5</td><td class="num">2</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓*</td></tr>
+<tr><td>R1</td><td>Temporal RAG (Wikipedia revisions)</td><td class="num">5</td><td class="num">4</td><td class="num">5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>A4</td><td>LLM watermarking + attacks</td><td class="num">5</td><td class="num">4</td><td class="num">3.5</td><td class="flag-yes">✓</td><td class="flag-no">✗†</td><td class="flag-yes">✓</td></tr>
+<tr><td>B2</td><td>Sketch → working artifact</td><td class="num">5</td><td class="num">4</td><td class="num">4.5</td><td class="flag-no">✗</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C1</td><td>Verified synthetic distillation</td><td class="num">4.5</td><td class="num">4.5</td><td class="num">4</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C2</td><td>Hinglish / code-mixed eval set</td><td class="num">4.5</td><td class="num">4</td><td class="num">4</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C5</td><td>Prompt-injection corpus</td><td class="num">4.5</td><td class="num">4</td><td class="num">5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>R2</td><td>RAG corpus poisoning attack/defense</td><td class="num">4.5</td><td class="num">4</td><td class="num">5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>A5</td><td>Automated red-teaming harness</td><td class="num">4.5</td><td class="num">4</td><td class="num">4</td><td class="flag-yes">✓</td><td class="flag-no">✗†</td><td class="flag-yes">✓</td></tr>
+<tr><td>A7</td><td>DPO from scratch</td><td class="num">4</td><td class="num">4.5</td><td class="num">2.5</td><td class="flag-yes">✓</td><td class="flag-no">✗</td><td class="flag-yes">✓*</td></tr>
+<tr><td>A2</td><td>Self-repairing code agent</td><td class="num">4</td><td class="num">4</td><td class="num">3.5</td><td class="flag-yes">✓</td><td class="flag-no">✗</td><td class="flag-yes">✓</td></tr>
+<tr><td>C3</td><td>GitHub code-review mining</td><td class="num">4</td><td class="num">4</td><td class="num">3</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C4</td><td>Post-cutoff hallucination benchmark</td><td class="num">4</td><td class="num">3.5</td><td class="num">3.5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C6</td><td>Cross-generator AI-text detector</td><td class="num">4</td><td class="num">3.5</td><td class="num">4.5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>D2</td><td>Tabular diffusion + membership inference</td><td class="num">4</td><td class="num">4</td><td class="num">3</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>A9</td><td>Self-consistency hallucination detection</td><td class="num">4</td><td class="num">3.5</td><td class="num">3</td><td class="flag-yes">✓</td><td class="flag-no">✗†</td><td class="flag-yes">✓</td></tr>
+<tr><td>A6</td><td>Speculative decoding from scratch</td><td class="num">3.5</td><td class="num">4.5</td><td class="num">4.5</td><td class="flag-yes">✓</td><td class="flag-no">✗</td><td class="flag-yes">✓</td></tr>
+<tr><td>R3</td><td>Multi-hop domain RAG (self-scraped)</td><td class="num">3.5</td><td class="num">4</td><td class="num">3.5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>A8</td><td>GraphRAG on HotpotQA</td><td class="num">3.5</td><td class="num">4</td><td class="num">3</td><td class="flag-yes">✓</td><td class="flag-no">✗†</td><td class="flag-yes">✓</td></tr>
+<tr><td>B1</td><td>Image diffusion from scratch</td><td class="num">3</td><td class="num">4</td><td class="num">3</td><td class="flag-no">✗</td><td class="flag-yes">✓</td><td class="flag-no">tight</td></tr>
+</table>
+
+<h2>Table C &mdash; Ranked by Demo Value</h2>
+<div class="section-intro">This is now the decision-driving axis. A project can score high here purely by staging a moment a panel understands in five seconds &mdash; regardless of how hard it was to build.</div>
+<table>
+<tr><th>#</th><th>Idea</th><th>Demo</th><th>Complexity</th><th>Resume</th><th>Text-only</th><th>Self-collected</th><th>T4-OK</th></tr>
+<tr><td>R1</td><td>Temporal RAG (Wikipedia revisions)</td><td class="num">5</td><td class="num">4</td><td class="num">5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>R2</td><td>RAG corpus poisoning attack/defense</td><td class="num">5</td><td class="num">4</td><td class="num">4.5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C5</td><td>Prompt-injection corpus</td><td class="num">5</td><td class="num">4</td><td class="num">4.5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>A6</td><td>Speculative decoding from scratch</td><td class="num">4.5</td><td class="num">4.5</td><td class="num">3.5</td><td class="flag-yes">✓</td><td class="flag-no">✗</td><td class="flag-yes">✓</td></tr>
+<tr><td>C6</td><td>Cross-generator AI-text detector</td><td class="num">4.5</td><td class="num">3.5</td><td class="num">4</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>B2</td><td>Sketch → working artifact</td><td class="num">4.5</td><td class="num">4</td><td class="num">5</td><td class="flag-no">✗</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C1</td><td>Verified synthetic distillation</td><td class="num">4</td><td class="num">4.5</td><td class="num">4.5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C2</td><td>Hinglish / code-mixed eval set</td><td class="num">4</td><td class="num">4</td><td class="num">4.5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>A5</td><td>Automated red-teaming harness</td><td class="num">4</td><td class="num">4</td><td class="num">4.5</td><td class="flag-yes">✓</td><td class="flag-no">✗†</td><td class="flag-yes">✓</td></tr>
+<tr><td>R3</td><td>Multi-hop domain RAG (self-scraped)</td><td class="num">3.5</td><td class="num">4</td><td class="num">3.5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>C4</td><td>Post-cutoff hallucination benchmark</td><td class="num">3.5</td><td class="num">3.5</td><td class="num">4</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>A4</td><td>LLM watermarking + attacks</td><td class="num">3.5</td><td class="num">4</td><td class="num">5</td><td class="flag-yes">✓</td><td class="flag-no">✗†</td><td class="flag-yes">✓</td></tr>
+<tr><td>A2</td><td>Self-repairing code agent</td><td class="num">3.5</td><td class="num">4</td><td class="num">4</td><td class="flag-yes">✓</td><td class="flag-no">✗</td><td class="flag-yes">✓</td></tr>
+<tr><td>C3</td><td>GitHub code-review mining</td><td class="num">3</td><td class="num">4</td><td class="num">4</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>D2</td><td>Tabular diffusion + membership inference</td><td class="num">3</td><td class="num">4</td><td class="num">4</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td></tr>
+<tr><td>A8</td><td>GraphRAG on HotpotQA</td><td class="num">3</td><td class="num">4</td><td class="num">3.5</td><td class="flag-yes">✓</td><td class="flag-no">✗†</td><td class="flag-yes">✓</td></tr>
+<tr><td>A9</td><td>Self-consistency hallucination detection</td><td class="num">3</td><td class="num">3.5</td><td class="num">4</td><td class="flag-yes">✓</td><td class="flag-no">✗†</td><td class="flag-yes">✓</td></tr>
+<tr><td>B1</td><td>Image diffusion from scratch</td><td class="num">3</td><td class="num">4</td><td class="num">3</td><td class="flag-no">✗</td><td class="flag-yes">✓</td><td class="flag-no">tight</td></tr>
+<tr><td>A7</td><td>DPO from scratch</td><td class="num">2.5</td><td class="num">4.5</td><td class="num">4</td><td class="flag-yes">✓</td><td class="flag-no">✗</td><td class="flag-yes">✓*</td></tr>
+<tr><td>D1</td><td>Discrete text diffusion vs. AR twin</td><td class="num">2</td><td class="num">5</td><td class="num">5</td><td class="flag-yes">✓</td><td class="flag-yes">✓</td><td class="flag-yes">✓*</td></tr>
+</table>
+
+<h2>Demo Tiers &mdash; Staging Notes for a Live Panel</h2>
+
+<div class="tier">
+  <h3>Tier 1 &mdash; the demo sells itself</h3>
+  <ul class="tier-list">
+    <li><b>R2 &middot; RAG poisoning.</b> Ask the question, get the correct answer. Inject three poison documents live. Ask again &mdash; the system now confidently states the false answer. Toggle the defense on, correct answer returns. Three visible state changes in ~90 seconds, no interpretation required.</li>
+    <li><b>R1 &middot; Temporal RAG.</b> Side-by-side panes, identical time-qualified question. Vanilla RAG confidently returns the superseded clause; yours returns the current one with a revision timeline rendered underneath. The judge sees <i>why</i> the baseline is wrong, not just that it is.</li>
+    <li><b>C5 &middot; Prompt injection.</b> The agent reads a document, hits the hidden instruction, visibly does the wrong thing. Keep the payload tame and obviously staged (a marker string, not exfiltration) and say "my own agent, my own sandbox" out loud before running it.</li>
+  </ul>
+</div>
+
+<div class="tier">
+  <h3>Tier 2 &mdash; good demo, needs a purpose-built UI</h3>
+  <ul class="tier-list">
+    <li><b>A6 &middot; Speculative decoding.</b> Two panes, identical prompt, streaming tokens started at once &mdash; yours visibly finishes first with identical output. The demo value lives entirely in building this race UI; budget time for it.</li>
+    <li><b>C6 &middot; AI-text detector.</b> Hand judges the keyboard, let them try to fool it. Double-edged: it will fail on an unseen generator. Frame that failure as the result, not a bug.</li>
+    <li><b>C1 &middot; Verified synthetic distillation.</b> Type a request, a tiny local model emits a regex/SQL query, it executes and passes live. Less dramatic, but the accompanying claim is strong and quantified.</li>
+    <li><b>C2 &middot; Hinglish eval set.</b> Five sentences where frontier models misread sarcasm and yours doesn't. Cultural resonance with an Indian panel is underrated as a memorability factor.</li>
+  </ul>
+</div>
+
+<div class="tier">
+  <h3>Tier 3 &mdash; charts, not demos</h3>
+  <ul class="tier-list">
+    <li><b>D2, C4, R3, C3</b> all produce professional-looking results (distribution overlays, calibration curves, hop traces) but nothing that makes a panel lean forward.</li>
+    <li><b>C3</b> carries extra risk: judges will critique the generated review comments on quality and it will lose that argument.</li>
+    <li><b>C4</b> has one good beat worth staging even inside a chart-heavy talk: ask about something recent, watch the model fabricate with total confidence.</li>
+  </ul>
+</div>
+
+<div class="tier">
+  <h3>Tier 4 &mdash; demo risk</h3>
+  <ul class="tier-list">
+    <li><b>D1 &middot; Text diffusion.</b> The denoising animation &mdash; text materializing out of masked tokens step by step &mdash; is genuinely beautiful and nobody on the panel will have seen it. But the resulting text will be weak, and a panel that grades on output quality will mark it down regardless of implementation depth. Only viable if your grading rewards technical depth over demo polish.</li>
+  </ul>
+</div>
+
+<div class="callout">
+  <h3>Demo-day staging rules</h3>
+  <ul>
+    <li>Never demo live off free Colab &mdash; it will disconnect, and it will disconnect during your slot.</li>
+    <li>Cache every result to disk; run the demo locally off cached artifacts.</li>
+    <li>Record a full backup video of the sequence. Panels forgive a video; they do not forgive four minutes of watching you reconnect a runtime.</li>
+    <li>Script the demo to a fixed ~90-second beat sequence and rehearse it, including the failure case.</li>
+  </ul>
+</div>
+
+<hr class="divider">
+
+<h2>Shortlist &mdash; Best for a Live-Demo Panel</h2>
+<div class="section-intro">Re-ordered for your actual grading format: demo value first, then resume value, all fully compliant and inference-only where possible so nothing can fail to converge the night before.</div>
+
+<div class="shortlist-item">
+  <h3>R2 &middot; RAG corpus poisoning attack/defense</h3>
+  <span class="ratings"><span class="chip demo">Demo 5</span></span>
+  The most theatrical project on the list. Answer flips live when poisoned, flips back when
+  defended. Inference-only &mdash; nothing to train, nothing to fail overnight.
+</div>
+<div class="shortlist-item">
+  <h3>R1 &middot; Temporal RAG over Wikipedia revisions</h3>
+  <span class="ratings"><span class="chip demo">Demo 5</span></span>
+  Retrieval that knows documents supersede each other. Dataset comes free from the MediaWiki
+  revision API &mdash; gold questions derive mechanically from diffs. Side-by-side baseline
+  comparison is an instant, self-explaining visual. Inference-only.
+</div>
+<div class="shortlist-item">
+  <h3>C5 &middot; Prompt-injection corpus for a tool-using agent</h3>
+  <span class="ratings"><span class="chip demo">Demo 5</span></span>
+  You author the attacks, you own the agent, you measure and then defend. Live attacks land
+  hard with panels; frame explicitly as defensive evaluation of your own system.
+</div>
+<div class="shortlist-item">
+  <h3>C1 &middot; Verified synthetic distillation</h3>
+  <span class="ratings"><span class="chip demo">Demo 4</span></span>
+  Zero scraping, zero ToS risk, zero PII. The yield-rate finding (a large fraction of
+  LLM-generated data is simply wrong) is itself a result, and the live pass/fail execution
+  check is a clean, quick demo beat.
+</div>
+<div class="shortlist-item">
+  <h3>C2 &middot; Hinglish / code-mixed evaluation set</h3>
+  <span class="ratings"><span class="chip demo">Demo 4</span></span>
+  Most distinctive dataset on the list, and the failure examples read well live to an
+  audience that gets the cultural context instantly.
+</div>
+<div class="demote">
+  <h3 style="margin-bottom:2pt;">D1 &middot; Discrete text diffusion (not shortlisted for this format)</h3>
+  Highest ceiling on the whole survey and the top resume pick &mdash; but wrong format for a
+  live-demo panel. <span class="chip demo" style="background:#b00;">Demo 2</span> Output quality is
+  visibly weak by design, and panels grade what they see. Reconsider only if the grading
+  rubric explicitly rewards technical depth over demo polish, or if this is for a report +
+  viva rather than a live run.
+</div>
+
+<hr class="divider">
+
+<h2>Full Catalogue</h2>
+<div class="section-intro">One entry per idea: what it is, how the dataset is collected, ratings, T4 verdict, the hard part, and the honest weakness.</div>
+
+<div class="card">
+  <h3>C1 &middot; Verified synthetic distillation</h3>
+  <div class="ratings"><span class="chip">Complexity 4.5</span><span class="chip">Creativity 4.5</span><span class="chip ok">Resume 4.5</span><span class="chip demo">Demo 4</span></div>
+  <div class="field"><b>What:</b> Pick a machine-checkable task (NL&rarr;regex, NL&rarr;SQL, NL&rarr;cron, NL&rarr;ffmpeg). Generate thousands of pairs with a large model, execute each output to filter for correctness, keep only survivors.</div>
+  <div class="field"><b>Dataset:</b> Fully self-generated + self-verified. ~10k generated &rarr; ~4k survive typically.</div>
+  <div class="field"><b>T4 verdict:</b> Comfortable &mdash; LoRA a 1&ndash;3B model on the filtered set.</div>
+  <div class="field"><b>Hard part:</b> Building the executable verifier per task type is the real engineering, not the prompting.</div>
+  <div class="field"><b>Demo:</b> Type a request live, the tiny model emits a regex/SQL query, it executes against test cases on screen and passes. Quick, clean, no drama needed.</div>
+  <div class="field weakness">Weakness: task choice determines everything &mdash; pick one where "correct" is unambiguous to check.</div>
+</div>
+
+<div class="card">
+  <h3>C2 &middot; Hinglish / code-mixed evaluation set</h3>
+  <div class="ratings"><span class="chip">Complexity 4</span><span class="chip">Creativity 4.5</span><span class="chip ok">Resume 4.5</span><span class="chip demo">Demo 4</span></div>
+  <div class="field"><b>What:</b> Scrape code-mixed Indian-language text, hand-annotate for sarcasm/negation/transliteration ambiguity, show model failure, fine-tune to close the gap.</div>
+  <div class="field"><b>Dataset:</b> YouTube Data API or Reddit API, 1.5&ndash;3k hand-annotated examples with reported inter-annotator agreement (Cohen's &kappa;).</div>
+  <div class="field"><b>T4 verdict:</b> Comfortable.</div>
+  <div class="field"><b>Hard part:</b> Annotation labor &mdash; recruit 2&ndash;3 annotators, agree on a rubric first.</div>
+  <div class="field"><b>Demo:</b> Five sentences where a frontier model misreads sarcasm or negation and yours doesn't. Lands especially well with a panel that gets the cultural context instantly.</div>
+  <div class="field weakness">Weakness: strip usernames/PII, keep only public content, document the collection protocol explicitly.</div>
+</div>
+
+<div class="card">
+  <h3>C3 &middot; GitHub code-review model</h3>
+  <div class="ratings"><span class="chip">Complexity 4</span><span class="chip">Creativity 4</span><span class="chip ok">Resume 4</span><span class="chip demo">Demo 3</span></div>
+  <div class="field"><b>What:</b> Mine (diff hunk, review comment) pairs from real PRs, filter noise (LGTM/bots/dupes), fine-tune a reviewer model.</div>
+  <div class="field"><b>Dataset:</b> GitHub REST API, target 5&ndash;15k clean pairs from permissively-licensed (MIT/Apache) repos.</div>
+  <div class="field"><b>T4 verdict:</b> Comfortable.</div>
+  <div class="field"><b>Hard part:</b> Matching a comment to the exact hunk it targets; dedup near-identical reviews.</div>
+  <div class="field"><b>Demo:</b> Feed a live diff, get a generated review comment on screen. Risk: judges will critique the comment's quality directly and it can lose that argument.</div>
+  <div class="field weakness">Weakness: license hygiene must be documented, not assumed.</div>
+</div>
+
+<div class="card">
+  <h3>C4 &middot; Post-cutoff hallucination benchmark</h3>
+  <div class="ratings"><span class="chip">Complexity 3.5</span><span class="chip">Creativity 4</span><span class="chip ok">Resume 4</span><span class="chip demo">Demo 3.5</span></div>
+  <div class="field"><b>What:</b> Build a QA set from events after the target model's training cutoff. Measure fabrication confidence, calibration, and how much retrieval fixes it.</div>
+  <div class="field"><b>Dataset:</b> RSS scraping + hand-written gold answers with source URLs, 300&ndash;500 questions.</div>
+  <div class="field"><b>T4 verdict:</b> Easy, inference-only.</div>
+  <div class="field"><b>Hard part:</b> None major &mdash; this is the most approachable idea on the list.</div>
+  <div class="field"><b>Demo:</b> Ask about something recent live, watch the model fabricate a confident, wrong answer. One good beat even inside an otherwise chart-heavy talk.</div>
+  <div class="field weakness">Weakness: smallest engineering surface here. Add a calibration analysis (Brier score, reliability diagram) for depth.</div>
+</div>
+
+<div class="card">
+  <h3>C5 &middot; Prompt-injection corpus for a tool-using agent</h3>
+  <div class="ratings"><span class="chip">Complexity 4</span><span class="chip">Creativity 4.5</span><span class="chip ok">Resume 4.5</span><span class="chip demo">Demo 5</span></div>
+  <div class="field"><b>What:</b> Build a small tool-using agent, author your own injection attack corpus (direct, indirect-via-retrieval, multi-turn, encoded), measure attack success rate per category, build and evaluate a defense.</div>
+  <div class="field"><b>Dataset:</b> You author the attacks and harvest the agent's own traces &mdash; both original.</div>
+  <div class="field"><b>T4 verdict:</b> Comfortable, inference-only.</div>
+  <div class="field"><b>Hard part:</b> Building a genuinely useful (not toy) agent worth attacking.</div>
+  <div class="field"><b>Demo:</b> Live attack lands, the agent visibly mis-acts (wrong tool call, ignored task) on a hidden instruction. Use a tame, obviously staged payload (a marker string, not exfiltration) and state "my own agent, my own sandbox" out loud before running it.</div>
+  <div class="field weakness">Weakness: frame explicitly as defensive evaluation of your own system &mdash; this framing is what makes it legitimate.</div>
+</div>
+
+<div class="card">
+  <h3>C6 &middot; Cross-generator AI-text detector</h3>
+  <div class="ratings"><span class="chip">Complexity 3.5</span><span class="chip">Creativity 4</span><span class="chip ok">Resume 4</span><span class="chip demo">Demo 4.5</span></div>
+  <div class="field"><b>What:</b> Collect human text from a niche source you control, generate matched AI counterparts yourself across several models/temperatures, train a detector, then test against a generator held out from training entirely.</div>
+  <div class="field"><b>Dataset:</b> Both halves self-built and paired by design.</div>
+  <div class="field"><b>T4 verdict:</b> Easy.</div>
+  <div class="field"><b>Hard part:</b> Getting genuinely diverse AI-generated samples (multiple models/prompts), not just one generator repeated.</div>
+  <div class="field"><b>Demo:</b> Hand judges the keyboard, let them try to fool it &mdash; the only idea here with audience participation. It will fail on an unseen generator; frame that live failure as the result, not a bug.</div>
+  <div class="field weakness">Weakness: the interesting result is that detectors collapse out-of-distribution &mdash; report that honestly rather than tuning it away.</div>
+</div>
+
+<div class="card">
+  <h3>R1 &middot; Temporal RAG over Wikipedia revisions</h3>
+  <div class="ratings"><span class="chip">Complexity 4</span><span class="chip">Creativity 5</span><span class="chip ok">Resume 5</span><span class="chip demo">Demo 5</span></div>
+  <div class="field"><b>What:</b> Retrieval-augmented generation that is aware documents supersede each other over time &mdash; version-aware filtering, recency reranking, explicit conflict detection at generation.</div>
+  <div class="field"><b>Dataset:</b> MediaWiki revision API on ~200 articles across their edit history (free, CC-licensed). Candidate questions auto-derived from revision diffs, ~300 hand-verified into a gold set.</div>
+  <div class="field"><b>T4 verdict:</b> Easy &mdash; embeddings + a 3&ndash;7B 4-bit reader, no training required.</div>
+  <div class="field"><b>Hard part:</b> Deriving clean, unambiguous time-qualified questions from raw diffs.</div>
+  <div class="field"><b>Demo:</b> Side-by-side panes, identical question. Baseline confidently returns the superseded fact; yours returns the current one with a revision timeline rendered underneath &mdash; the judge sees why the baseline is wrong, not just that it is.</div>
+  <div class="field weakness">Weakness: none major &mdash; strongest risk/reward ratio on this list, for both grading formats.</div>
+</div>
+
+<div class="card">
+  <h3>R2 &middot; RAG corpus poisoning &mdash; attack and defense</h3>
+  <div class="ratings"><span class="chip">Complexity 4</span><span class="chip">Creativity 4.5</span><span class="chip ok">Resume 4.5</span><span class="chip demo">Demo 5</span></div>
+  <div class="field"><b>What:</b> Build RAG over a scraped corpus, inject adversarial documents crafted to be retrieved and to override correct answers. Measure attack success rate vs. poison count and corpus size, then defend with consistency voting / provenance scoring.</div>
+  <div class="field"><b>Dataset:</b> Any scraped public-domain corpus + a self-authored poison set (the poison set is the original contribution).</div>
+  <div class="field"><b>T4 verdict:</b> Easy, inference-only.</div>
+  <div class="field"><b>Hard part:</b> Crafting poison documents subtle enough to be realistic, not obviously adversarial.</div>
+  <div class="field"><b>Demo:</b> The most theatrical option on the list. Correct answer &rarr; inject poison live &rarr; answer flips to the false one &rarr; toggle defense on &rarr; correct answer returns. Three visible state changes in ~90 seconds.</div>
+  <div class="field weakness">Weakness: state explicitly this is a defensive evaluation of your own corpus.</div>
+</div>
+
+<div class="card">
+  <h3>R3 &middot; Multi-hop domain RAG (self-scraped corpus)</h3>
+  <div class="ratings"><span class="chip">Complexity 4</span><span class="chip">Creativity 3.5</span><span class="chip ok">Resume 3.5</span><span class="chip demo">Demo 3.5</span></div>
+  <div class="field"><b>What:</b> Scrape a real domain (court judgments, RBI circulars, university regulations), author ~300 questions requiring 2&ndash;3 documents combined, compare flat RAG vs. decomposition vs. graph traversal.</div>
+  <div class="field"><b>Dataset:</b> Self-scraped domain corpus + hand-authored multi-hop questions.</div>
+  <div class="field"><b>T4 verdict:</b> Easy.</div>
+  <div class="field"><b>Hard part:</b> Authoring genuinely multi-hop questions that can't be answered from a single document.</div>
+  <div class="field"><b>Demo:</b> Show the retrieval trace hopping across documents to assemble an answer flat RAG misses entirely. Decent, not showstopping &mdash; the domain choice has to carry interest.</div>
+  <div class="field weakness">Weakness: least surprising of the RAG ideas &mdash; the domain choice has to carry it.</div>
+</div>
+
+<div class="card">
+  <h3>D1 &middot; Discrete text diffusion vs. autoregressive twin</h3>
+  <div class="ratings"><span class="chip">Complexity 5</span><span class="chip">Creativity 5</span><span class="chip ok">Resume 5</span><span class="chip demo" style="background:#b00;">Demo 2</span></div>
+  <div class="field"><b>What:</b> Implement masked discrete diffusion (D3PM/SEDD-style) for text from scratch. Train an AR transformer of identical parameter count on the same data. Compare quality and parallel-sampling behavior (diffusion denoises all positions at once vs. AR's strictly sequential decode).</div>
+  <div class="field"><b>Dataset:</b> Scrape a narrow, structurally consistent corpus &mdash; recipe steps, commit messages, arXiv abstracts, product descriptions.</div>
+  <div class="field"><b>T4 verdict:</b> Feasible only if kept small: ~30&ndash;60M params, sequence length 64&ndash;128, small vocab. A few hours per run &mdash; checkpoint to Drive constantly, free Colab disconnects.</div>
+  <div class="field"><b>Hard part:</b> The diffusion training objective itself; nobody at this level implements it, so no shortcuts to copy from a tutorial.</div>
+  <div class="field"><b>Demo:</b> The denoising animation (text materializing out of masked tokens) is genuinely striking and rare. But the output text is weak, and a panel grading on live output quality will mark it down regardless of implementation depth &mdash; the single biggest resume/demo mismatch in this survey.</div>
+  <div class="field weakness">Weakness: generated text will be mediocre by design &mdash; the deliverable is the controlled comparison, not a good language model. State that upfront in the report as a feature, not an excuse.</div>
+</div>
+
+<div class="card">
+  <h3>D2 &middot; Tabular diffusion + membership-inference attack</h3>
+  <div class="ratings"><span class="chip">Complexity 4</span><span class="chip">Creativity 4</span><span class="chip ok">Resume 4</span><span class="chip demo">Demo 3</span></div>
+  <div class="field"><b>What:</b> Diffusion model over mixed continuous/categorical tabular data for synthetic generation. Measure utility (train-on-synthetic-test-on-real) and privacy leakage (membership-inference attack against your own generator). Plot the tradeoff.</div>
+  <div class="field"><b>Dataset:</b> Scrape a tabular corpus yourself &mdash; job/rental listings, OpenAQ/CPCB air-quality readings, cricket records.</div>
+  <div class="field"><b>T4 verdict:</b> Comfortable &mdash; tabular models are small, full runs under an hour.</div>
+  <div class="field"><b>Hard part:</b> Implementing the membership-inference attack correctly, not the diffusion model itself.</div>
+  <div class="field"><b>Demo:</b> A tradeoff curve and a "was this row in the training set?" guess the audience can play along with. Solid, not a showstopper &mdash; it's a chart with one interactive moment.</div>
+  <div class="field weakness">Weakness: less flashy than text/image diffusion, but the privacy angle is what almost nobody does.</div>
+</div>
+
+<hr class="divider">
+
+<h2>Appendix &mdash; Ruled Out by Current Constraints</h2>
+<div class="section-intro">Kept for the record. Each fails at least one constraint; noted where a straightforward substitution would rescue it.</div>
+
+<div class="card appendix">
+  <h3>B1 &middot; Image diffusion from scratch</h3>
+  <div class="ratings"><span class="chip bad">Fails: text-only</span><span class="chip">Complexity 4</span><span class="chip">Resume 3</span><span class="chip demo">Demo 3</span></div>
+  <div class="field">DDPM/U-Net implemented from scratch on a structured image domain (floor plans, circuits, textile motifs). Excluded per the no-images constraint. T4 is tight even at 64&times;64 resolution.</div>
+</div>
+
+<div class="card appendix">
+  <h3>B2 &middot; Sketch &rarr; working artifact</h3>
+  <div class="ratings"><span class="chip bad">Fails: text-only</span><span class="chip">Complexity 4</span><span class="chip ok">Resume 5</span><span class="chip demo">Demo 4.5</span></div>
+  <div class="field">Hand-drawn ER diagram/wireframe photo &rarr; structured IR &rarr; generated SQL schema or React component via VLM. Excluded per the no-images constraint, though it has the best live-demo value of anything surveyed &mdash; draw on paper, hold it up to a camera, watch working code appear.</div>
+</div>
+
+<div class="card appendix">
+  <h3>A2 &middot; Self-repairing code agent</h3>
+  <div class="ratings"><span class="chip bad">Fails: readymade data</span><span class="chip">Complexity 4</span><span class="chip">Resume 4</span><span class="chip demo">Demo 3.5</span></div>
+  <div class="field">Generate&rarr;execute&rarr;read traceback&rarr;patch&rarr;retry loop, benchmarked on HumanEval/MBPP. Rescue: swap the benchmark for a self-collected set of buggy-code/fix pairs mined from your own repos or Stack Overflow, keeping the execution-feedback loop as the core contribution.</div>
+</div>
+
+<div class="card appendix">
+  <h3>A4 &middot; LLM watermarking + attacks</h3>
+  <div class="ratings"><span class="chip bad">Fails: readymade data</span><span class="chip">Complexity 4</span><span class="chip ok">Resume 5</span><span class="chip demo">Demo 3.5</span></div>
+  <div class="field">Implement green-list watermarking + detector, then break it via paraphrase/temperature/substitution attacks. Originally cited against C4 (streamed, no labels needed) &mdash; only fails the constraint if you insist on a curated prompt set; substitute any self-scraped prompt corpus and this becomes fully compliant. Highest resume value on the whole survey after D1.</div>
+</div>
+
+<div class="card appendix">
+  <h3>A5 &middot; Automated red-teaming harness</h3>
+  <div class="ratings"><span class="chip bad">Fails: readymade data</span><span class="chip">Complexity 4</span><span class="chip ok">Resume 4.5</span><span class="chip demo">Demo 4</span></div>
+  <div class="field">Attacker LLM generates jailbreak attempts against your own small local model, judge scores success, successful attacks mutate and feed back. Rescue: author the seed attack set yourself instead of starting from AdvBench &mdash; the mutation loop generates the rest, so the readymade dependency is only at the seed.</div>
+</div>
+
+<div class="card appendix">
+  <h3>A6 &middot; Speculative decoding from scratch</h3>
+  <div class="ratings"><span class="chip bad">Fails: readymade data (barely applies)</span><span class="chip">Complexity 4.5</span><span class="chip">Resume 3.5</span><span class="chip demo">Demo 4.5</span></div>
+  <div class="field">Small draft model proposes tokens, large model verifies via acceptance sampling; benchmark tokens/sec and memory. Barely needs a dataset at all &mdash; any prompt set works for latency benchmarking, so this is nearly compliant already. Rarest infra skill surveyed. Revised demo take: build a two-pane live streaming race (identical prompt, both start at once, yours visibly finishes first with identical text) &mdash; the race itself is a strong live beat, but the whole demo value depends on building that race UI, and the acceptance-sampling math is easy to get subtly wrong.</div>
+</div>
+
+<div class="card appendix">
+  <h3>A7 &middot; DPO from scratch</h3>
+  <div class="ratings"><span class="chip bad">Fails: readymade data</span><span class="chip">Complexity 4.5</span><span class="chip">Resume 4</span><span class="chip demo" style="background:#b00;">Demo 2.5</span></div>
+  <div class="field">Implement the DPO loss yourself (not via <code>trl</code>), fine-tune vs. an SFT-only baseline, compare judge win-rates. Originally cited against hh-rlhf/UltraFeedback. Rescue: generate your own preference pairs by sampling two completions per prompt and ranking them yourself or with a judge model &mdash; turns this into a self-collected-data project with the same from-scratch DPO core.</div>
+</div>
+
+<div class="card appendix">
+  <h3>A8 &middot; GraphRAG on HotpotQA</h3>
+  <div class="ratings"><span class="chip bad">Fails: readymade data</span><span class="chip">Complexity 4</span><span class="chip">Resume 3.5</span><span class="chip demo">Demo 3</span></div>
+  <div class="field">Entity/relation extraction into a knowledge graph, multi-hop traversal vs. vector-search baseline. Directly superseded by R3 on this list, which is the same idea with a self-scraped corpus and self-authored questions instead of HotpotQA.</div>
+</div>
+
+<div class="card appendix">
+  <h3>A9 &middot; Self-consistency hallucination detection</h3>
+  <div class="ratings"><span class="chip bad">Fails: readymade data</span><span class="chip">Complexity 3.5</span><span class="chip">Resume 4</span><span class="chip demo">Demo 3</span></div>
+  <div class="field">Sample n responses at temperature, measure self-consistency via NLI entailment + token uncertainty to flag fabrications, score against TruthfulQA/HaluEval labels. Directly superseded by C4 on this list, which is the same detection mechanism validated against a self-collected post-cutoff gold set instead.</div>
+</div>
+
+</body>
+</html>
