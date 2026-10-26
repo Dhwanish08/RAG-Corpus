@@ -1,8 +1,8 @@
 # R2 Progress Tracker (RAG corpus poisoning: attack & defense)
 
-**Claude: read this file first every session. Update it after every step and every script run. Work one step at a time.**
+**Claude: read this file first every session; it is the source of truth for where things stand. Update it at the end of every prompt (run log, change log, next action), even if the prompt only planned or discussed. Work one step at a time.**
 
-Goal: working prototype by ~2026-10-19 showing the full flow (correct -> poisoned -> defended) plus an ASR table.
+Goal: working prototype, demo 2026-10-26 (was ~2026-10-19), showing the full flow (correct -> poisoned -> defended) plus an ASR table.
 Plan file: `C:\Users\Acer\.claude\plans\we-did-make-a-modular-dragon.md`
 Env: local RTX 4050 (6 GB), Python 3.12, torch 2.5.1+cu121, gradio 6.28. Run scripts from `r2/`.
 
@@ -25,6 +25,10 @@ Env: local RTX 4050 (6 GB), Python 3.12, torch 2.5.1+cu121, gradio 6.28. Run scr
 
 ## Run log
 (newest first; format: date - command - key numbers)
+- 2026-10-26 - `git switch -c neel` from main, `git add -A`, commit, `git push -u origin neel` to https://github.com/Dhwanish08/RAG-Corpus (user asked for everything on branch `neel`). No experiment runs.
+- 2026-10-25 - Built `R2-Project-Report.docx` (56 pages, 38 numbered body pages, 17 figures, 21 tables) from `Fw__Minor_Project_Presentation/` guidelines; Word (COM) refreshed the TOC / list of figures / list of tables and exported a PDF that was checked page by page. No experiment runs; all numbers come from `attack.py --summary`.
+- 2026-10-25 - `python -X utf8 attack.py --adaptive` (full, corpus 125, ~10 min, log `r2/adaptive.log`). Padded poison (>= 60 words), ASR at count 1/3/5/10: no defense 54% / 82% / 88% / 94%; provenance 56% / 82% / 88% / 94%. Accuracy under provenance 32% / 16% / 6% / 0%; recovery 0% / 2.4% / 2.3% / 0%. Poison in top-5: 100%. Provenance is fully defeated by padding. (Earlier smoke test on 5 q agreed.)
+- 2026-10-25 - `python -X utf8 test_r2.py` -> all tests passed (incl. new `test_pad_poison`). First run failed: sentence split cut "Glenn T. Seaborg" at the initial, so padding leaked the q004 answer; fixed.
 - 2026-10-12 - `python attack.py --clean --poison` (full sweep, ~15 min). Corpus 125: clean 94.0% acc. count 1 mixed: acc 32%, ASR 58%; count 3: 12% / 84%; count 5: 0% / 94%; count 10: 0% / 96%. Style at count 1: keyword ASR 58%, natural 38%, authoritative 48%; at count 3: keyword 82%, natural 76%, authoritative 72%. Corpus 50: near-identical (clean 92%; count 1 ASR 58%, count 10 ASR 96%). Poison-in-top5 = 100% everywhere, so every flip/non-flip is a reader effect, not a retrieval failure.
 - 2026-10-12 - smoke test `--poison --limit 5 --sizes 125` (scratch csv): ~1.5 s per generation.
 - 2026-10-12 - `python test_r2.py` -> all tests passed (incl. new alias-vs-target check).
@@ -32,6 +36,10 @@ Env: local RTX 4050 (6 GB), Python 3.12, torch 2.5.1+cu121, gradio 6.28. Run scr
 
 ## Change log
 (newest first; files touched and why)
+- 2026-10-26 Publish - branch `neel` created from `main` and pushed with all pending work: adaptive attack code/tests, results.csv + gen_cache (padded rows), `R2-Project-Report.docx`, `Fw__Minor_Project_Presentation/` (university templates, now public), CLAUDE.md/PROGRESS.md, and the five deleted brief/status files. `main` untouched; no PR opened. The repo is public.
+- 2026-10-25 Report - new `R2-Project-Report.docx` (project root): cover from `front page(4).docx` (title filled, name/enrollment/mentor left as placeholders, NOV-2026), inside cover, dedication, abstract, publications, copyright, undertaking, declaration, mentor/company/plagiarism certificates, acknowledgements, TOC, lists of figures/tables/abbreviations, chapters 1-8 following the template TOC (results live in chapter 7 "Conclusion & Discussion"), annexures I-II. Format per guidelines: A4, margins 1/1.5/1/1 in, Times New Roman 12, 1.5 spacing, roman page numbers in the preliminaries (cover counted, unnumbered), arabic from chapter 1. Generator scripts are throwaway (session scratchpad), not in the repo. To fill: names, enrollment no., mentor, dedication, plagiarism %, dates, a Gradio screenshot in Annexure I. References are from memory: verify before submission.
+- 2026-10-25 Adaptive attack - `r2/attack.py`: `pad_poison()` pads each poison stub to >= 60 words with sentences from the gold article (never the correct answer or an alias; checked on the joined text; split avoids breaking initials like "T."), `ask_one(pad=)`, style `"padded"` in `eval_config`, `run_adaptive()` (counts 1/3/5/10, defenses none + provenance, corpus 125), `--adaptive` flag. `r2/test_r2.py`: `test_pad_poison` (all 500 padded docs >= 40 words, keep the target, never state the answer).
+- 2026-10-25 Process - rule changed to "update PROGRESS.md after every prompt". Edited `CLAUDE.md`, memory `progress-tracker.md` + `MEMORY.md`, and the header/goal here (demo date now 2026-10-26). Nothing in the code changed. Note for the demo: nothing is trained (RAG with a pretrained reader); the benchmarks are the ASR/accuracy tables. Git shows 5 deleted brief/status files (GAI-Project-Ideas.pdf, R2-Project-Brief.pdf, R2-Project-Status.docx, gai-project-ideas.html, r2-project-brief.html); CONFIRMED by the user 2026-10-25: deleted on purpose, leave them deleted.
 - 2026-10-12 Publish - project committed and pushed to https://github.com/Dhwanish08/RAG-Corpus (branch main, public). `.gitignore` excludes `__pycache__/`, `*.log`, `.claude/`; everything else is tracked, including `data/gen_cache.*` (needed for the demo's offline replay). The repo is public and some files contain the author's email.
 - 2026-10-12 Step 5 - `app.py` (project root, Gradio 6): question dropdown, poison-count radio (1/3/5/10), buttons Ask / Inject poison and ask again / Defense on (provenance) and ask again / Run all three; three columns each with answer + verdict + top-5 chunk table (poison column labelled "hidden from defense"); results table from results.csv. `attack.py`: extracted `ask_one()` (retrieve+inject+answer for one question) shared by the sweep and the app. NOT RUN YET: only start it after the defense run finishes (single-writer gen_cache).
 - 2026-10-12 Step 4 - `r2/defense.py`: two defenses. `provenance` = drop retrieved chunks shorter than MIN_WORDS=40 (not ingest-format) then answer jointly. `voting` = score-outlier filter (z>1.5) then per-chunk answers, majority wins. `DEFENSES` dict. `attack.py`: `--defense [provenance voting]` (default both, corpus 125 only), `recovery` column in `--summary` (share of undefended-flipped answers the defense restores to correct).
@@ -51,6 +59,9 @@ Env: local RTX 4050 (6 GB), Python 3.12, torch 2.5.1+cu121, gradio 6.28. Run scr
 | none | 94% | 58% | 84% | 94% | 96% | - |
 | provenance | 94% | 0% | 0% | 0% | 0% | 93% / 93% / 94% / 94% |
 | voting | 72% | 12% | 92% | 92% | 92% | 69% / 0% / 0% / 0% |
+| provenance vs PADDED poison (adaptive) | 94% | 56% | 82% | 88% | 94% | 0% / 2% / 2% / 0% |
+| none vs PADDED poison | 94% | 54% | 82% | 88% | 94% | - |
+- ADAPTIVE RESULT (2026-10-25): padding poison past 40 words completely defeats provenance (ASR equals the undefended number, recovery ~0%). The 0% ASR above holds only for short stubs. Say this in the demo before a reviewer does; next defense idea is a content-hash manifest of trusted chunks (only ingest-time hashes are admitted), not built yet.
 - Provenance first version (filter only the original top-5, fall back to all if empty) failed at 5+ poison docs (ASR 60% / 96%) because all 5 slots were poison stubs. Fixed by filtering at retrieval time: over-fetch 20, drop <40-word chunks, keep best 5 (`OVERFETCH` in attack.py).
 - Voting costs utility and collapses once poison is the majority, as predicted.
 - HONEST CAVEAT: provenance's perfect result depends on the poison being short stubs (10-37 words) that I wrote; MIN_WORDS=40 was set knowing that. It is a result about this poison set, not a general defense. The adaptive attack (poison padded to normal chunk length) has NOT been run yet and is the first thing a reviewer will ask about.
@@ -73,4 +84,16 @@ Env: local RTX 4050 (6 GB), Python 3.12, torch 2.5.1+cu121, gradio 6.28. Run scr
 - Housekeeping: `r2/sweep.log`, `r2/defense.log`, `r2/defense2.log`, `app.log` are run logs and can be deleted.
 
 ## Next action
-Step 6 (wrap-up): (a) user click-through of `python app.py` (open http://127.0.0.1:7860) on q003/q015/q012; (b) write the 90-second demo script + rehearsal checklist here; (c) decide whether to run the adaptive padded-poison attack before the demo (recommended: it tests the provenance caveat). Post-prototype: plots, final report, voting variants.
+Demo is tomorrow (2026-10-26). Adaptive run is DONE and recorded above; `app.py` is safe to start now. Remaining: Step 6 (wrap-up): (a) user click-through of `python app.py` (open http://127.0.0.1:7860) on q003/q015/q012; (b) write the 90-second demo script + rehearsal checklist here; (c) decide whether to run the adaptive padded-poison attack before the demo (recommended: it tests the provenance caveat). Post-prototype: plots, final report, voting variants.
+
+## Interview pitch (drafted 2026-10-25; rehearse, then tick off)
+1. Problem: RAG answers from retrieved text, so whoever can write into the corpus can steer the answer (corpus poisoning). Setup: 125 Wikipedia articles, 50 factual questions, local Qwen2.5-3B reader, MiniLM retriever. Nothing is trained; we measure attack success rate (ASR).
+2. Live (q003): clean 1944 -> inject 1 fake doc -> 1954 -> defense on -> 1944.
+3. Numbers: baseline 94%. Poison reaches top-5 in 100% of cases. 1 doc flips 58%, 10 docs 96%. Corpus size 50 vs 125 makes no difference.
+4. Defense: provenance filter (drop chunks shorter than 40 words, over-fetch 4x) -> ASR 0%, accuracy 94%, no utility cost. Voting ablation failed: clean accuracy 72%, collapses once poison is the majority.
+5. Limitation (say it first): MIN_WORDS=40 was set after seeing my poison lengths. Adaptive attacker pads poison to 60+ words with real article sentences -> provenance ASR back to 56/82/88/94%. So it stops the naive attack only.
+6. Next: content-hash manifest of ingest-time chunks, so injected docs cannot be admitted.
+Likely questions: why not an LLM judge (aliases + whole-word match, known limit); why 3B reader (6 GB GPU); is poison realistic (attacker spoofs the source title; assumes write access to the corpus).
+- 2026-10-25 - (discussion only) user asked how poison count changes results; answered from existing tables, no runs. Summary: ASR rises 58 -> 84 -> 94 -> 96% (1/3/5/10 docs), accuracy falls 32 -> 12 -> 0 -> 0%; gain is steepest from 1 to 3 docs then saturates; padded poison follows the same curve (54/82/88/94%); retrieval is 100% at every count, so count acts on the reader, not the retriever.
+Report drafted (see change log 2026-10-25). Before submitting: fill the bracketed placeholders in `R2-Project-Report.docx`, add a Gradio screenshot to Annexure I, verify the references, and press F9 in Word if the page numbers in the contents look stale.
+Work is on branch `neel` (not merged to `main`). Next: fill the report placeholders, add a Gradio screenshot, click through `app.py`, rehearse the demo.

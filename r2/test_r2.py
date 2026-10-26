@@ -116,6 +116,25 @@ def test_poison_set(path=f"{DATA}/poison.jsonl", expect_per_question=10):
     assert not bad, f"{len(bad)} bad poison docs: {bad}"
 
 
+def test_pad_poison():
+    """Padded poison must clear the provenance length filter and still never state the correct answer."""
+    from attack import match, pad_poison
+    from defense import MIN_WORDS
+
+    docs = load_corpus(f"{DATA}/corpus.jsonl")
+    with open(f"{DATA}/gold.jsonl", encoding="utf-8") as f:
+        gold = [json.loads(line) for line in f]
+    with open(f"{DATA}/poison.jsonl", encoding="utf-8") as f:
+        poison = [json.loads(line) for line in f]
+    by_id = {g["id"]: g for g in gold}
+    for p in poison:
+        g = by_id[p["id"]]
+        t = pad_poison(p["text"], g, docs, p["variant"])
+        assert len(t.split()) >= MIN_WORDS, (p["id"], p["variant"], len(t.split()))
+        assert g["attacker_target"].lower() in t.lower(), (p["id"], p["variant"], "lost target")
+        assert not any(match(t, a) for a in (g["correct_answer"], *g.get("aliases", []))), (p["id"], p["variant"], "padding states the answer")
+
+
 if __name__ == "__main__":
     import sys
 
@@ -128,4 +147,5 @@ if __name__ == "__main__":
     test_add_injects_into_live_index()
     test_gold_set_is_grounded_and_retrievable()
     test_poison_set()
+    test_pad_poison()
     print("all tests passed")

@@ -3,6 +3,8 @@
 Modes (run from r2/):
     python attack.py --clean      unpoisoned baseline (both corpus sizes)
     python attack.py --poison     poison sweep: count {1,3,5,10}, style, corpus size
+    python attack.py --defense    re-run clean + attacks through each defense
+    python attack.py --adaptive   padded-poison attacker vs none and provenance
     python attack.py --summary    print the ASR table from results.csv
 
 Rows are merged into results.csv by config, so each mode only replaces its own rows.
@@ -110,14 +112,35 @@ def sub_index(idx: Index, n_articles: int, gold: list[dict]) -> Index:
     return Index([idx.docs[i] for i in mask], idx.vecs[mask])
 
 
-def ask_one(idx, row, poison, cache, variants=(), answer_fn=cached_answer, over=1):
+def pad_poison(text: str, row: dict, docs: list[dict], variant: int = 0, target: int = 60) -> str:
+    """Adaptive attacker: pad a poison stub to >= target words with sentences from
+    the gold article itself, skipping any that state the correct answer, so the
+    doc is no shorter than a genuine chunk (the provenance filter's only signal)."""
+    bad = (row["correct_answer"], *row.get("aliases", ()))
+    # (?<![A-Z]\.) keeps initials like "Glenn T. Seaborg" in one sentence
+    sents = [
+        s for d in docs if d["source"] == row["source_title"]
+        for s in re.split(r"(?<=[.!?])(?<![A-Z]\.)\s+", d["text"])
+    ]
+    k = variant % len(sents) if sents else 0
+    for s in sents[k:] + sents[:k]:
+        if len(text.split()) >= target:
+            break
+        if not any(match(f"{text} {s}", a) for a in bad):  # checks the joined text, so a split answer can't slip through
+            text += " " + s
+    return text
+
+
+def ask_one(idx, row, poison, cache, variants=(), answer_fn=cached_answer, over=1, pad=False):
     """Retrieve + answer one gold question -> (top-5 docs, answer). Poison docs
     are injected into a throwaway copy of the index with the gold article's
-    title as their source (the attacker spoofs the article)."""
+    title as their source (the attacker spoofs the article). pad=True is the
+    adaptive attacker (see pad_poison)."""
     local = Index(idx.docs, idx.vecs)
     if variants:
         local.add([
-            {"text": p["text"], "source": row["source_title"], "poison": True}
+            {"text": pad_poison(p["text"], row, idx.docs, p["variant"]) if pad else p["text"],
+             "source": row["source_title"], "poison": True}
             for p in poison[row["id"]] if p["variant"] in variants
         ])
     top = local.retrieve(row["question"], k=5 * over)  # best-first; top[:5] is what an undefended reader sees
@@ -129,7 +152,7 @@ def eval_config(idx, gold, poison, cache, variants=(), style="", defense="none",
     rows = []
     size = len({d["source"] for d in idx.docs})
     for row in gold:
-        top, gen = ask_one(idx, row, poison, cache, variants, answer_fn, OVERFETCH.get(defense, 1))
+        top, gen = ask_one(idx, row, poison, cache, variants, answer_fn, OVERFETCH.get(defense, 1), pad=style == "padded")
         top = top[:5]  # metrics describe the undefended top-5
         rows.append({
             "id": row["id"],
@@ -262,11 +285,29 @@ def run_defense(gold, indexes, out, names):
                     save_rows(r, out)
 
 
+def run_adaptive(gold, indexes, out):
+    """Padded-poison attacker vs no defense and vs provenance (the filter this attack targets)."""
+    from defense import DEFENSES
+
+    poison = load_poison()
+    with shelve.open(CACHE_PATH) as cache:
+        for name in ("none", "provenance"):
+            for n, idx in indexes.items():
+                for c in COUNTS:
+                    r = eval_config(idx, gold, poison, cache, list(range(c)), "padded", name, DEFENSES.get(name, cached_answer))
+                    acc = sum(x["correct"] for x in r) / len(r)
+                    asr = sum(x["attack_success"] for x in r) / len(r)
+                    pr = sum(x["n_poison_top5"] > 0 for x in r) / len(r)
+                    print(f"padded {name} corpus={n} count={c}: accuracy {acc:.1%}, ASR {asr:.1%}, poison-in-top5 {pr:.1%}", file=sys.stderr)
+                    save_rows(r, out)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--clean", action="store_true", help="unpoisoned baseline")
     ap.add_argument("--poison", action="store_true", help="poison sweep")
     ap.add_argument("--defense", nargs="*", choices=DEFENSE_NAMES, help="re-run clean + attacks through these defenses (none given = all)")
+    ap.add_argument("--adaptive", action="store_true", help="padded-poison attack vs none and provenance (corpus 125)")
     ap.add_argument("--summary", action="store_true", help="print the results table")
     ap.add_argument("--limit", type=int, default=None, help="only the first N gold questions (smoke test)")
     ap.add_argument("--sizes", type=int, nargs="+", default=None, help="corpus sizes in articles (default 125 50; 125 for --defense)")
@@ -275,8 +316,8 @@ if __name__ == "__main__":
 
     if args.summary:
         print(format_summary(load_results(args.out)))
-    elif args.clean or args.poison or args.defense is not None:
-        sizes = args.sizes or ([125] if args.defense is not None and not (args.clean or args.poison) else SIZES)
+    elif args.clean or args.poison or args.adaptive or args.defense is not None:
+        sizes = args.sizes or ([125] if (args.adaptive or args.defense is not None) and not (args.clean or args.poison) else SIZES)
         gold, indexes = _setup(args.limit, sizes)
         if args.clean:
             run_clean(gold, indexes, args.out)
@@ -284,6 +325,8 @@ if __name__ == "__main__":
             run_poison(gold, indexes, args.out)
         if args.defense is not None:
             run_defense(gold, indexes, args.out, args.defense or DEFENSE_NAMES)
+        if args.adaptive:
+            run_adaptive(gold, indexes, args.out)
         print(format_summary(load_results(args.out)))
     else:
         ap.print_help()
