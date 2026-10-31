@@ -135,6 +135,37 @@ def test_pad_poison():
         assert not any(match(t, a) for a in (g["correct_answer"], *g.get("aliases", []))), (p["id"], p["variant"], "padding states the answer")
 
 
+def test_manifest():
+    """Every genuine chunk passes the manifest; every poison doc is rejected, as a stub and padded."""
+    from attack import pad_poison
+    from defense import manifest_filter
+
+    docs = load_corpus(f"{DATA}/corpus.jsonl")
+    assert len(manifest_filter(docs)) == len(docs), "a genuine chunk was rejected"
+    with open(f"{DATA}/gold.jsonl", encoding="utf-8") as f:
+        by_id = {g["id"]: g for g in map(json.loads, f)}
+    with open(f"{DATA}/poison.jsonl", encoding="utf-8") as f:
+        poison = [json.loads(line) for line in f]
+    for p in poison:
+        g = by_id[p["id"]]
+        for t in (p["text"], pad_poison(p["text"], g, docs, p["variant"])):
+            fake = {"text": t, "source": g["source_title"], "poison": True}
+            # a lone doc would hit the keep-or-docs fallback, so pair it with a genuine chunk
+            assert manifest_filter([fake, docs[0]]) == [docs[0]], (p["id"], p["variant"], "poison passed")
+
+
+def test_graded_levels():
+    """Stricter provenance levels never keep more chunks, and the full level drops every stub."""
+    from defense import FILTERS
+
+    clean = load_corpus(f"{DATA}/corpus.jsonl")
+    with open(f"{DATA}/poison.jsonl", encoding="utf-8") as f:
+        stubs = [{"text": p["text"], "source": "x", "poison": True} for p in map(json.loads, f)]
+    kept = [len(FILTERS[n](clean + stubs)) for n in ("prov25", "prov50", "prov75", "provenance")]
+    assert kept == sorted(kept, reverse=True), kept
+    assert not any(d["poison"] for d in FILTERS["provenance"](clean + stubs)), "a stub survived the 40-word cutoff"
+
+
 if __name__ == "__main__":
     import sys
 
@@ -148,4 +179,6 @@ if __name__ == "__main__":
     test_gold_set_is_grounded_and_retrievable()
     test_poison_set()
     test_pad_poison()
+    test_manifest()
+    test_graded_levels()
     print("all tests passed")

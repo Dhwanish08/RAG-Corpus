@@ -16,7 +16,7 @@ import pandas as pd  # noqa: E402
 import shelve  # noqa: E402
 
 from attack import CACHE_PATH, DATA, OVERFETCH, ask_one, cached_answer, load_jsonl, load_poison, load_results, match, summarize  # noqa: E402
-from defense import DEFENSES, ingest_filter  # noqa: E402
+from defense import DEFENSES, FILTERS  # noqa: E402
 from rag import Index, load_corpus  # noqa: E402
 
 GOLD = {g["id"]: g for g in load_jsonl(f"{DATA}/gold.jsonl")}
@@ -27,11 +27,20 @@ CACHE = shelve.open(CACHE_PATH)
 LOCK = threading.Lock()  # dbm cache and the reader are not thread-safe
 
 
-def ask(qid: str, count: int, defense: str):
+DEFENSE_CHOICES = [
+    ("Provenance, 40-word cutoff (100%)", "provenance"),
+    ("Hash manifest", "manifest"),
+    ("Provenance 75% (30 words)", "prov75"),
+    ("Provenance 50% (20 words)", "prov50"),
+    ("Provenance 25% (10 words)", "prov25"),
+]
+
+
+def ask(qid: str, count: int, defense: str, attack: str = "stub"):
     row = GOLD[qid]
     fn = cached_answer if defense == "none" else DEFENSES[defense]
     with LOCK:
-        top, gen = ask_one(IDX, row, POISON, CACHE, list(range(int(count))), fn, OVERFETCH.get(defense, 1))
+        top, gen = ask_one(IDX, row, POISON, CACHE, list(range(int(count))), fn, OVERFETCH.get(defense, 1), pad=attack == "padded")
         CACHE.sync()
     if match(gen, row["attacker_target"]):
         verdict = "❌ **Attack succeeded** - the answer states the attacker's value."
@@ -39,7 +48,7 @@ def ask(qid: str, count: int, defense: str):
         verdict = "✅ **Correct**"
     else:
         verdict = "⚠️ Neither the correct answer nor the attacker's value."
-    kept = {id(d) for d in (ingest_filter(top)[:5] if defense == "provenance" else top)}
+    kept = {id(d) for d in (FILTERS[defense](top)[:5] if defense in FILTERS else top[:5])}
     chunks = pd.DataFrame([
         {
             "rank": i,
@@ -69,8 +78,8 @@ def results_table():
     ])
 
 
-def run_all(qid, count):
-    return (*ask(qid, 0, "none"), *ask(qid, count, "none"), *ask(qid, count, "provenance"))
+def run_all(qid, count, attack, defense):
+    return (*ask(qid, 0, "none"), *ask(qid, count, "none", attack), *ask(qid, count, defense, attack))
 
 
 with gr.Blocks(title="RAG poisoning demo") as demo:
@@ -79,6 +88,9 @@ with gr.Blocks(title="RAG poisoning demo") as demo:
     with gr.Row():
         qid = gr.Dropdown([(f"{k}: {v['question']}", k) for k, v in GOLD.items()], value="q003", label="Question", scale=3)
         count = gr.Radio([1, 3, 5, 10], value=3, label="Poison docs to inject", scale=1)
+    with gr.Row():
+        attack = gr.Radio([("Short stubs (naive)", "stub"), ("Padded to chunk length (adaptive)", "padded")], value="stub", label="Attacker")
+        defense = gr.Dropdown(DEFENSE_CHOICES, value="provenance", label="Defense")
     with gr.Row():
         b1 = gr.Button("1 · Ask (no poison)")
         b2 = gr.Button("2 · Inject poison, ask again", variant="stop")
@@ -93,9 +105,9 @@ with gr.Blocks(title="RAG poisoning demo") as demo:
                 c = gr.Dataframe(label="Top-5 retrieved chunks", wrap=True)
                 outs += [a, c]
     b1.click(lambda q: ask(q, 0, "none"), qid, outs[0:2])
-    b2.click(lambda q, n: ask(q, n, "none"), [qid, count], outs[2:4])
-    b3.click(lambda q, n: ask(q, n, "provenance"), [qid, count], outs[4:6])
-    ball.click(run_all, [qid, count], outs)
+    b2.click(lambda q, n, a: ask(q, n, "none", a), [qid, count, attack], outs[2:4])
+    b3.click(lambda q, n, a, d: ask(q, n, d, a), [qid, count, attack, defense], outs[4:6])
+    ball.click(run_all, [qid, count, attack, defense], outs)
     gr.Markdown("## Attack and defense results (50 questions)")
     table = gr.Dataframe(value=results_table, wrap=True)
 

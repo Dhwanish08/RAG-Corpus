@@ -4,6 +4,7 @@ Everything else (attack.py, defense.py, app.py) imports this. The index is a
 plain numpy array so it supports runtime append (np.vstack) -- the live demo
 injects poison into a loaded index without rebuilding anything.
 """
+import hashlib
 import json
 
 import numpy as np
@@ -84,6 +85,16 @@ def load_corpus(path: str) -> list[dict]:
             for c in chunk(rec["text"], rec["title"]):
                 docs.append({"text": c, "source": rec["title"], "poison": False})
     return docs
+
+
+def text_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def write_manifest(docs: list[dict], path: str):
+    """Trusted ingest record: one sha256 per chunk, written when the corpus is ingested."""
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(sorted({text_hash(d["text"]) for d in docs})) + "\n")
 
 
 ANSWER_PROMPT = """Answer the question using ONLY the context below. \

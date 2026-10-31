@@ -1,4 +1,8 @@
-"""Defenses: sit between retrieve and answer. Two, evaluated separately.
+"""Defenses: sit between retrieve and answer. Three, evaluated separately.
+
+manifest: origin check. sha256 of every genuine chunk is recorded at ingest
+  (data/manifest.txt); a retrieved chunk whose hash is not in it was injected
+  afterwards. Beats padding because it ignores how the text looks.
 
 provenance: ingest-format check. Genuine chunks come out of rag.chunk(), which
   merges paragraphs up to ~200 words, so a retrieved chunk far shorter than that
@@ -15,23 +19,57 @@ threshold defeats it; upgrade path is a content-hash manifest of trusted chunks.
 Voting fails once poison is the majority of the top-5 and cuts clean accuracy because
 single chunks often cannot answer alone.
 """
+import os
 import statistics
+from functools import partial
 
-from attack import _norm, cached_answer
+from attack import DATA, _norm, cached_answer
+from rag import load_corpus, text_hash, write_manifest
 
 MIN_WORDS = 40  # provenance: shorter chunks are not ingest-format
 Z_DROP = 1.5  # voting: drop chunks scoring more than this many std above the top-5 mean
 MIN_KEEP = 2  # never filter below this many chunks
 
 
-def ingest_filter(docs: list[dict]) -> list[dict]:
-    keep = [d for d in docs if len(d["text"].split()) >= MIN_WORDS]
+def ingest_filter(docs: list[dict], min_words: int = MIN_WORDS) -> list[dict]:
+    keep = [d for d in docs if len(d["text"].split()) >= min_words]
     return keep or docs  # nothing passes (not seen with 4x over-fetch): fall back rather than answer from nothing
 
 
-def provenance_answer(cache, question: str, docs: list[dict]) -> str:
-    """docs = 4x over-fetched candidates, best first: drop non-ingest-format chunks, keep the best 5."""
-    return cached_answer(cache, question, ingest_filter(docs)[:5])
+_manifest = None
+
+
+def manifest_filter(docs: list[dict]) -> list[dict]:
+    """Keep only chunks whose sha256 is in the ingest-time manifest (data/manifest.txt).
+    Judges origin, not appearance, so padding or paraphrasing poison cannot get it past.
+    Never reads the poison flag.
+
+    ponytail: the manifest is built from the corpus on first use if the file is missing;
+    in a real deployment it is written once at ingest and kept where the attacker can't
+    write. Poison present before ingest is hashed in and passes.
+    """
+    global _manifest
+    if _manifest is None:
+        path = f"{DATA}/manifest.txt"
+        if not os.path.exists(path):
+            write_manifest(load_corpus(f"{DATA}/corpus.jsonl"), path)
+        with open(path, encoding="utf-8") as f:
+            _manifest = set(f.read().split())
+    keep = [d for d in docs if text_hash(d["text"]) in _manifest]
+    return keep or docs  # same fallback as ingest_filter
+
+
+# graded strength: provNN applies NN% of the full 40-word cutoff; "provenance" is the 100% level
+FILTERS = {
+    **{f"prov{pct}": partial(ingest_filter, min_words=MIN_WORDS * pct // 100) for pct in (25, 50, 75)},
+    "provenance": ingest_filter,
+    "manifest": manifest_filter,
+}
+
+
+def _filtered(f):
+    """Answer from the best 5 chunks that survive filter f (docs = 4x over-fetched candidates, best first)."""
+    return lambda cache, question, docs: cached_answer(cache, question, f(docs)[:5])
 
 
 def filter_outliers(docs: list[dict]) -> list[dict]:
@@ -73,4 +111,4 @@ def defended_answer(cache, question: str, docs: list[dict]) -> str:
     return min((a for _, a in best), key=len)  # shortest phrasing in the winning group
 
 
-DEFENSES = {"provenance": provenance_answer, "voting": defended_answer}
+DEFENSES = {**{n: _filtered(f) for n, f in FILTERS.items()}, "voting": defended_answer}

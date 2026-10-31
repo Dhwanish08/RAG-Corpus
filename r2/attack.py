@@ -30,8 +30,8 @@ FIELDS = [
 ]
 STYLES = ["keyword", "natural", "authoritative"]  # variant v has style STYLES[v % 3]
 COUNTS = [1, 3, 5, 10]
-DEFENSE_NAMES = ["provenance", "voting"]
-OVERFETCH = {"provenance": 4}  # defenses that filter at retrieval time fetch 4x candidates, then keep the best 5
+DEFENSE_NAMES = ["prov25", "prov50", "prov75", "provenance", "manifest", "voting"]
+OVERFETCH = dict.fromkeys(DEFENSE_NAMES[:-1], 4)  # every filter defense (all but voting) that filter at retrieval time fetch 4x candidates, then keep the best 5
 SIZES = [125, 50]  # distinct articles; 50 is a subsample that keeps every gold source
 
 
@@ -286,12 +286,12 @@ def run_defense(gold, indexes, out, names):
 
 
 def run_adaptive(gold, indexes, out):
-    """Padded-poison attacker vs no defense and vs provenance (the filter this attack targets)."""
+    """Padded-poison attacker vs no defense, the provenance levels (the filter this attack targets) and the manifest."""
     from defense import DEFENSES
 
     poison = load_poison()
     with shelve.open(CACHE_PATH) as cache:
-        for name in ("none", "provenance"):
+        for name in ("none", "prov25", "prov50", "prov75", "provenance", "manifest"):
             for n, idx in indexes.items():
                 for c in COUNTS:
                     r = eval_config(idx, gold, poison, cache, list(range(c)), "padded", name, DEFENSES.get(name, cached_answer))
@@ -307,7 +307,7 @@ if __name__ == "__main__":
     ap.add_argument("--clean", action="store_true", help="unpoisoned baseline")
     ap.add_argument("--poison", action="store_true", help="poison sweep")
     ap.add_argument("--defense", nargs="*", choices=DEFENSE_NAMES, help="re-run clean + attacks through these defenses (none given = all)")
-    ap.add_argument("--adaptive", action="store_true", help="padded-poison attack vs none and provenance (corpus 125)")
+    ap.add_argument("--adaptive", action="store_true", help="padded-poison attack vs none, the provenance levels and manifest (corpus 125)")
     ap.add_argument("--summary", action="store_true", help="print the results table")
     ap.add_argument("--limit", type=int, default=None, help="only the first N gold questions (smoke test)")
     ap.add_argument("--sizes", type=int, nargs="+", default=None, help="corpus sizes in articles (default 125 50; 125 for --defense)")

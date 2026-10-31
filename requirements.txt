@@ -1,0 +1,13 @@
+# Python 3.12. Versions are the ones the results were produced with.
+# torch needs the CUDA 12.1 wheel index (RTX 4050, 6 GB); on a CPU-only machine use plain torch==2.5.1.
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch==2.5.1+cu121
+transformers==5.5.0
+accelerate==1.13.0
+bitsandbytes==0.50.2
+sentence-transformers==6.0.1
+numpy==2.4.4
+pandas==2.2.3
+gradio==6.28.0
+matplotlib==3.10.8
+requests==2.33.1
