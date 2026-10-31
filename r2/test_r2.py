@@ -239,6 +239,26 @@ def test_manifest_preingest():
     assert FILTERS["manifest_preingest"](stubs[:3]) == stubs[:3]
 
 
+def test_answer_all():
+    """answer_all runs every defense, in order, on one retrieval; with a tampered copy retrieved next to its
+    original, neardup abstains and earliest answers. A stub reader keeps this offline."""
+    import attack
+    from defense import ALL_DEFENSES, answer_all
+
+    with open(f"{DATA}/gold.jsonl", encoding="utf-8") as f:
+        row = json.loads(f.readlines()[2])  # q003
+    idx = Index.build(load_corpus(f"{DATA}/corpus.jsonl"))
+    real, attack.answer = attack.answer, (lambda q, docs: "FAKE")
+    try:
+        out = list(answer_all(idx, row, {}, {}, [0, 1, 2], "tampered"))
+    finally:
+        attack.answer = real
+    assert [n for n, _ in out] == ALL_DEFENSES
+    ans = dict(out)
+    assert all(isinstance(a, str) for a in ans.values())
+    assert ans["neardup"] == attack.ABSTAIN_TEXT and ans["earliest"] == "FAKE" and ans["none"] == "FAKE"
+
+
 if __name__ == "__main__":
     import sys
 
@@ -258,4 +278,5 @@ if __name__ == "__main__":
     test_tamper()
     test_neardup_calibration()
     test_manifest_preingest()
+    test_answer_all()
     print("all tests passed")

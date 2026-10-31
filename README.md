@@ -67,7 +67,7 @@ python -X utf8 app.py                     # Gradio demo at http://127.0.0.1:7860
 
 Only one process should write the answer cache at a time (do not run a sweep while the demo is open, and make sure an old demo server is stopped before starting a sweep).
 
-The demo: pick a question, the number of poison documents, the attacker (stubs, padded or tampered copy) and the defense, then press "Run all three" to see clean, poisoned and defended answers side by side with the retrieved chunks (including each chunk's ingest order). Good showcases: q003 with the padded attacker (clean 1944, poisoned 1954; provenance still says 1954, the manifest restores 1944) and q015 or q012 with the tampered attacker (q015: Dmitri Mendeleev flips to Marie Curie; earliest restores it, neardup abstains, the manifest built after the poison does nothing). q003 is not flipped by three tampered copies.
+The demo: pick a question, the number of poison documents and the attacker (stubs, padded or tampered copy), then press **Run all defenses**. The candidate chunks are retrieved once and every defense answers them (undefended, provenance at 10/20/30/40 words, manifest, manifest built after the poison, neardup, earliest, voting). The page states the correct answer and the attacker's target, lists which defenses returned the correct answer and which did not (and why: attack succeeded, abstained, neither), and shows a table with every defense's answer next to the clean reference. A progress bar names the defense that is running; voting is the slow one when its answers are not cached (first use also loads the reader). Good showcases: q003 with the padded attacker (provenance still gives 1954, the manifest restores 1944) and q015 or q012 with the tampered attacker (q015: Dmitri Mendeleev flips to Marie Curie; manifest, earliest and voting restore it, the provenance filters and the manifest built after the poison do not, neardup abstains). q003 is not flipped by three tampered copies, and the page says so.
 
 ## Layout
 
@@ -75,10 +75,10 @@ The demo: pick a question, the number of poison documents, the attacker (stubs, 
 |---|---|
 | `r2/rag.py` | chunking, embeddings, index (stamps ingest order), reader, manifest writer |
 | `r2/attack.py` | poison injection, padded and tampered attackers, scoring, sweeps, `--summary` |
-| `r2/defense.py` | provenance (graded), manifest, near-duplicate (abstain / earliest), voting |
+| `r2/defense.py` | provenance (graded), manifest, near-duplicate (abstain / earliest), voting, and `answer_all` (every defense on one retrieval, used by the demo) |
 | `r2/overlap_stats.py` | overlap measurements behind the near-duplicate threshold (`figures/overlap_stats.md`) |
 | `r2/plots.py` | figures and the data table |
-| `r2/test_r2.py` | self-checks (corpus, gold set, poison set, padding, manifest, graded levels, ingest order, tampered copies, near-duplicate calibration) |
+| `r2/test_r2.py` | self-checks (corpus, gold set, poison set, padding, manifest, graded levels, ingest order, tampered copies, near-duplicate calibration, run-all-defenses) |
 | `r2/scrape.py` | builds `data/corpus.jsonl` from Wikipedia |
 | `app.py` | Gradio demo |
 | `data/` | corpus, 50 gold questions, 500 poison docs (see `data/README.md`), `manifest.txt`, `results.csv`, answer cache |

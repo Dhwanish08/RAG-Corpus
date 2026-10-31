@@ -31,7 +31,7 @@ import re
 import statistics
 from functools import partial
 
-from attack import ABSTAIN_TEXT, DATA, _norm, cached_answer
+from attack import ABSTAIN_TEXT, DATA, OVERFETCH, _norm, ask_one, cached_answer
 from rag import load_corpus, text_hash, write_manifest
 
 MIN_WORDS = 40  # provenance: shorter chunks are not ingest-format
@@ -174,3 +174,16 @@ def neardup_answer(cache, question: str, docs: list[dict]) -> str:
 
 
 DEFENSES = {**{n: _filtered(f) for n, f in FILTERS.items()}, "neardup": neardup_answer, "voting": defended_answer}
+
+
+ALL_DEFENSES = ["none", "prov25", "prov50", "prov75", "provenance", "manifest", "manifest_preingest", "neardup", "earliest", "voting"]  # display order; "none" = undefended reader
+
+
+def answer_all(idx, row, poison, cache, variants=(), style=""):
+    """Run every defense on the SAME retrieval and yield (name, answer) one at a time (the demo's single call).
+    The 20 candidates are retrieved once; each defense gets what eval_config gives it (all 20 for the over-fetching
+    ones, the best 5 for the undefended reader and voting), so the answers share cache keys with the sweeps."""
+    top, _ = ask_one(idx, row, poison, cache, variants, lambda c, q, d: "", 4, style)
+    for name in ALL_DEFENSES:
+        fn = cached_answer if name == "none" else DEFENSES[name]
+        yield name, fn(cache, row["question"], top if name in OVERFETCH else top[:5])

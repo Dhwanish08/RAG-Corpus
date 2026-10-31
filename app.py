@@ -1,7 +1,8 @@
-"""Gradio demo: ask -> inject poison -> ask again -> defense on.
+"""Gradio demo: pick a question and an attacker, press one button. Every defense answers the same
+retrieved chunks, and the report says which of them returned the correct answer.
 
-Run:  python app.py        (answers replay from data/gen_cache; the local reader
-loads only if a question/poison combination was never run before)
+Run:  python app.py        (answers replay from data/gen_cache; the local reader loads only if a
+question / poison / defense combination was never run before, which is when the progress bar matters)
 """
 import os
 import sys
@@ -15,8 +16,8 @@ import gradio as gr  # noqa: E402
 import pandas as pd  # noqa: E402
 import shelve  # noqa: E402
 
-from attack import ABSTAIN_TEXT, CACHE_PATH, DATA, OVERFETCH, ask_one, cached_answer, load_jsonl, load_poison, load_results, match, summarize  # noqa: E402
-from defense import DEFENSES, FILTERS  # noqa: E402
+from attack import ABSTAIN_TEXT, CACHE_PATH, DATA, ask_one, load_jsonl, load_poison, load_results, match, summarize  # noqa: E402
+from defense import ALL_DEFENSES, answer_all  # noqa: E402
 from rag import Index, load_corpus  # noqa: E402
 
 GOLD = {g["id"]: g for g in load_jsonl(f"{DATA}/gold.jsonl")}
@@ -26,50 +27,71 @@ IDX = Index.build(load_corpus(f"{DATA}/corpus.jsonl"))
 CACHE = shelve.open(CACHE_PATH)
 LOCK = threading.Lock()  # dbm cache and the reader are not thread-safe
 
+LABELS = {
+    "none": "No defense (poisoned)",
+    "prov25": "Provenance filter, 10 words (25%)",
+    "prov50": "Provenance filter, 20 words (50%)",
+    "prov75": "Provenance filter, 30 words (75%)",
+    "provenance": "Provenance filter, 40 words (100%)",
+    "manifest": "Hash manifest",
+    "manifest_preingest": "Hash manifest built after the poison",
+    "neardup": "Near-duplicate detection (abstains)",
+    "earliest": "Earliest ingest wins",
+    "voting": "Voting",
+}
+COLUMNS = ["Defense", "Answer", "Result"]
 
-DEFENSE_CHOICES = [
-    ("Provenance, 40-word cutoff (100%)", "provenance"),
-    ("Hash manifest", "manifest"),
-    ("Hash manifest, poison already present at ingest", "manifest_preingest"),
-    ("Near-duplicate detection (abstain)", "neardup"),
-    ("Earliest ingest wins (near-duplicates)", "earliest"),
-    ("Provenance 75% (30 words)", "prov75"),
-    ("Provenance 50% (20 words)", "prov50"),
-    ("Provenance 25% (10 words)", "prov25"),
-]
+
+def judge(row: dict, gen: str) -> str:
+    if gen.startswith(ABSTAIN_TEXT):
+        return "🛑 abstained"
+    if match(gen, row["attacker_target"]):
+        return "❌ attack succeeded"
+    if match(gen, row["correct_answer"], tuple(row.get("aliases", ()))):
+        return "✅ correct"
+    return "⚠️ neither"
 
 
-def ask(qid: str, count: int, defense: str, attack: str = "stub"):
-    row = GOLD[qid]
-    fn = cached_answer if defense == "none" else DEFENSES[defense]
-    with LOCK:
-        top, gen = ask_one(IDX, row, POISON, CACHE, list(range(int(count))), fn, OVERFETCH.get(defense, 1), style="" if attack == "stub" else attack)
-        CACHE.sync()
-    abstained = gen.startswith(ABSTAIN_TEXT)
-    if abstained:
-        verdict = "🛑 **Abstained** - two versions of the same source were retrieved, so no answer is given."
-    elif match(gen, row["attacker_target"]):
-        verdict = "❌ **Attack succeeded** - the answer states the attacker's value."
-    elif match(gen, row["correct_answer"], tuple(row.get("aliases", ()))):
-        verdict = "✅ **Correct**"
+def report(row: dict, done: dict) -> str:
+    """Summary line: the correct answer and which defenses returned it. done = {name: (answer, result)}."""
+    defs = ALL_DEFENSES[1:]  # "none" is the undefended baseline, not a defense
+    prov = ["prov25", "prov50", "prov75", "provenance"]
+    same = len({done[n][1] for n in prov}) == 1  # the four cut-offs behave alike: name them once
+    names = [n for n in defs if not (same and n in prov[1:])]
+    label = lambda n: "Provenance filter (all four cut-offs)" if same and n == "prov25" else LABELS[n]
+    right = [label(n) for n in names if done[n][1] == "✅ correct"]
+    wrong = [f"{label(n)} — {done[n][1].split(' ', 1)[1]}" for n in names if done[n][1] != "✅ correct"]
+    n_right = sum(done[n][1] == "✅ correct" for n in defs)
+    md = f"### Correct answer: {row['correct_answer']}  \n_Attacker's target: {row['attacker_target']}_\n\n"
+    md += f"✅ **Correct with {n_right} of {len(defs)} defenses:** " + (", ".join(right) or "none") + "\n\n"
+    if wrong:
+        md += "❌ **Not correct:** " + ", ".join(wrong) + "\n\n"
+    if done["none"][1] == "✅ correct":
+        md += "ℹ️ Even with no defense the answer survived: this attack did not flip this question."
     else:
-        verdict = "⚠️ Neither the correct answer nor the attacker's value."
-    kept = {id(d) for d in (FILTERS[defense](top)[:5] if defense in FILTERS else top[:5])}
-    chunks = pd.DataFrame([
-        {
-            "rank": i,
-            "score": round(d["score"], 3),
-            "source": d["source"],
-            "words": len(d["text"].split()),
-            "ingest order": d["seq"],
-            "used": "withheld (abstained)" if abstained else ("yes" if id(d) in kept else "dropped by defense"),
-            "poison (hidden from defense)": "POISON" if d["poison"] else "",
-            "text": d["text"][:160],
-        }
-        for i, d in enumerate(top[:10], 1)
-    ])
-    md = f"**Answer:** {gen}\n\n{verdict}\n\n_Correct: {row['correct_answer']} · Attacker target: {row['attacker_target']}_"
-    return md, chunks
+        md += f"ℹ️ With no defense the poisoned answer is _{done['none'][0]}_ ({done['none'][1].split(' ', 1)[1]})."
+    return md
+
+
+def ask_all(qid: str, count: int, attack: str, progress=gr.Progress()):
+    """Generator: yields (summary, table) after every defense, so the table fills in while the slow ones run."""
+    row = GOLD[qid]
+    n = len(ALL_DEFENSES)
+    table, done = [], {}
+    with LOCK:
+        yield "⏳ Starting ...", pd.DataFrame(columns=COLUMNS)
+        _, clean = ask_one(IDX, row, POISON, CACHE)  # no poison: the reference answer
+        table.append(("No poison (reference)", clean, judge(row, clean)))
+        runner = answer_all(IDX, row, POISON, CACHE, list(range(int(count))), "" if attack == "stub" else attack)
+        for k, name in enumerate(ALL_DEFENSES):
+            progress(k / n, desc=f"{LABELS[name]} ({k + 1} of {n})")
+            yield f"⏳ Running **{LABELS[name]}** ({k + 1} of {n}) ...", pd.DataFrame(table, columns=COLUMNS)
+            got, gen = next(runner)
+            assert got == name
+            done[name] = (gen, judge(row, gen))
+            table.append((LABELS[name], gen, done[name][1]))
+        CACHE.sync()
+    yield report(row, done), pd.DataFrame(table, columns=COLUMNS)
 
 
 def results_table():
@@ -85,38 +107,21 @@ def results_table():
     ])
 
 
-def run_all(qid, count, attack, defense):
-    return (*ask(qid, 0, "none"), *ask(qid, count, "none", attack), *ask(qid, count, defense, attack))
-
-
 with gr.Blocks(title="RAG poisoning demo") as demo:
     gr.Markdown("# RAG corpus poisoning: attack and defense\nA question is answered from a small Wikipedia chemistry corpus. "
-                "Inject fake documents and watch the answer flip, then turn the defense on.")
+                "Pick a question, how many fake documents to inject and the attacker, then press the button: every defense answers "
+                "the same retrieved chunks and the report lists which ones returned the correct answer.")
     with gr.Row():
-        qid = gr.Dropdown([(f"{k}: {v['question']}", k) for k, v in GOLD.items()], value="q003", label="Question", scale=3)
+        qid = gr.Dropdown([(f"{k}: {v['question']}", k) for k, v in GOLD.items()], value="q015", label="Question", scale=3)
         count = gr.Radio([1, 3, 5, 10], value=3, label="Poison docs to inject", scale=1)
-    with gr.Row():
-        attack = gr.Radio([("Short stubs (naive)", "stub"), ("Padded to chunk length (adaptive)", "padded"), ("Tampered copy of a genuine chunk (one fact swapped)", "tampered")], value="stub", label="Attacker")
-        defense = gr.Dropdown(DEFENSE_CHOICES, value="provenance", label="Defense")
-    with gr.Row():
-        b1 = gr.Button("1 · Ask (no poison)")
-        b2 = gr.Button("2 · Inject poison, ask again", variant="stop")
-        b3 = gr.Button("3 · Defense on, ask again", variant="primary")
-        ball = gr.Button("Run all three")
-    outs = []
-    with gr.Row():
-        for title in ("Clean", "Poisoned", "Defended"):
-            with gr.Column():
-                gr.Markdown(f"### {title}")
-                a = gr.Markdown()
-                c = gr.Dataframe(label="Top-5 retrieved chunks", wrap=True)
-                outs += [a, c]
-    b1.click(lambda q: ask(q, 0, "none"), qid, outs[0:2])
-    b2.click(lambda q, n, a: ask(q, n, "none", a), [qid, count, attack], outs[2:4])
-    b3.click(lambda q, n, a, d: ask(q, n, d, a), [qid, count, attack, defense], outs[4:6])
-    ball.click(run_all, [qid, count, attack, defense], outs)
+    attack = gr.Radio([("Short stubs (naive)", "stub"), ("Padded to chunk length (adaptive)", "padded"),
+                       ("Tampered copy of a genuine chunk (one fact swapped)", "tampered")], value="tampered", label="Attacker")
+    run = gr.Button("Run all defenses", variant="primary")
+    summary = gr.Markdown()
+    table = gr.Dataframe(label="Every defense, same retrieved chunks", headers=COLUMNS, wrap=True, interactive=False)
+    run.click(ask_all, [qid, count, attack], [summary, table])
     gr.Markdown("## Attack and defense results (50 questions)")
-    table = gr.Dataframe(value=results_table, wrap=True)
+    gr.Dataframe(value=results_table, wrap=True)
 
 if __name__ == "__main__":
     demo.launch()
