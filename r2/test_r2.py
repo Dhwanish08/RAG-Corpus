@@ -166,6 +166,79 @@ def test_graded_levels():
     assert not any(d["poison"] for d in FILTERS["provenance"](clean + stubs)), "a stub survived the 40-word cutoff"
 
 
+def test_seq_stamps():
+    """The index stamps ingest order itself; a later add is always later, even on a sliced index."""
+    mk = lambda t: {"text": t, "source": "x", "poison": False}
+    idx = Index.build([mk("a b"), mk("c d")])
+    assert [d["seq"] for d in idx.docs] == [0, 1]
+    idx.add([mk("e f"), {**mk("g h"), "seq": -5}])  # a writer-supplied seq is overwritten
+    assert [d["seq"] for d in idx.docs] == [0, 1, 2, 3]
+    sub = Index(idx.docs[1:2], idx.vecs[1:2])
+    sub.add([mk("i j")])
+    assert sub.docs[-1]["seq"] == 2
+
+
+def test_tamper():
+    """Tampered copies: all 50 x 10 name the target, never state the answer or an alias, and overlap a genuine chunk."""
+    from attack import match, tamper
+    from defense import _near_dup, _shingles
+
+    docs = load_corpus(f"{DATA}/corpus.jsonl")
+    with open(f"{DATA}/gold.jsonl", encoding="utf-8") as f:
+        gold = [json.loads(line) for line in f]
+    for g in gold:
+        own = [_shingles(d["text"]) for d in docs if d["source"] == g["source_title"]]
+        answers = (g["correct_answer"], *g.get("aliases", []))
+        for v in range(10):
+            t = tamper(g, docs, v)
+            assert g["attacker_target"].lower() in t.lower(), (g["id"], v, "lost target")
+            assert not any(match(t, a) for a in answers), (g["id"], v, "states the answer")
+            assert any(_near_dup(_shingles(t), o) for o in own), (g["id"], v, "not a near-duplicate of a genuine chunk")
+
+
+def test_neardup_calibration():
+    """Genuine chunks of one article never look like near-duplicates (so the threshold costs nothing on clean data),
+    a tampered copy does, and the two defenses act on it."""
+    from collections import defaultdict
+
+    from attack import ABSTAIN_TEXT, tamper
+    from defense import DEFENSES, FILTERS, NEARDUP, _shingles, neardup_pairs
+
+    docs = load_corpus(f"{DATA}/corpus.jsonl")
+    by = defaultdict(list)
+    for d in docs:
+        by[d["source"]].append(_shingles(d["text"]))
+    worst = max(len(a & b) / min(len(a), len(b)) for sh in by.values() for i, a in enumerate(sh) for b in sh[i + 1:])
+    assert worst < NEARDUP, (worst, NEARDUP)
+    print(f"clean same-article max containment {worst:.3f} < NEARDUP {NEARDUP}")
+
+    with open(f"{DATA}/gold.jsonl", encoding="utf-8") as f:
+        g = json.loads(f.readlines()[2])  # q003
+    genuine = [{**d, "seq": i} for i, d in enumerate(docs)]
+    original = next(d for d in genuine if d["source"] == g["source_title"] and g["correct_answer"] in d["text"])
+    copy = {"text": tamper(g, docs, 0), "source": g["source_title"], "poison": True, "seq": 10_000}
+    other = next(d for d in genuine if d["source"] != g["source_title"])
+    cands = [copy, original, other]  # best-first, copy ranked on top
+    assert neardup_pairs(cands) == [(0, 1)]
+    assert FILTERS["earliest"](cands) == [original, other], "earliest keeps the original, drops the later copy"
+    assert FILTERS["earliest"]([original, other]) == [original, other]
+    assert neardup_pairs([original, other]) == []
+    assert DEFENSES["neardup"]({}, g["question"], cands) == ABSTAIN_TEXT
+
+
+def test_manifest_preingest():
+    """A manifest regenerated after the poison was ingested admits it: the pre-ingest setting is the undefended row."""
+    from defense import FILTERS
+    from rag import text_hash
+
+    clean = load_corpus(f"{DATA}/corpus.jsonl")
+    with open(f"{DATA}/poison.jsonl", encoding="utf-8") as f:
+        stubs = [{"text": json.loads(l)["text"], "source": "x", "poison": True, "seq": 0} for l in f]
+    manifest = {text_hash(d["text"]) for d in clean + stubs}
+    assert all(text_hash(s["text"]) in manifest for s in stubs)
+    assert FILTERS["manifest_preingest"](stubs[:3]) == stubs[:3]
+
+
 if __name__ == "__main__":
     import sys
 
@@ -181,4 +254,8 @@ if __name__ == "__main__":
     test_pad_poison()
     test_manifest()
     test_graded_levels()
+    test_seq_stamps()
+    test_tamper()
+    test_neardup_calibration()
+    test_manifest_preingest()
     print("all tests passed")

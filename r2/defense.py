@@ -1,4 +1,4 @@
-"""Defenses: sit between retrieve and answer. Three, evaluated separately.
+"""Defenses: sit between retrieve and answer. Evaluated separately.
 
 manifest: origin check. sha256 of every genuine chunk is recorded at ingest
   (data/manifest.txt); a retrieved chunk whose hash is not in it was injected
@@ -9,8 +9,15 @@ provenance: ingest-format check. Genuine chunks come out of rag.chunk(), which
   did not come from the normal ingest path. Drop those, then answer from the rest.
 voting: score-outlier filter, then answer from each chunk on its own and take the
   majority answer (isolate-then-aggregate).
+neardup: copy detection. Two retrieved chunks of the SAME source that share most of their
+  5-word phrases are two versions of one passage (e.g. a genuine chunk and a tampered copy
+  of it); the text cannot say which is true, so abstain.
+earliest: same detection, but trust the index's own ingest order (seq, stamped by Index.add,
+  never by the writer): keep the earliest version of each near-duplicate group.
+manifest_preingest: the manifest regenerated AFTER the poison was ingested; it already holds
+  the poison's hash, so nothing is filtered (the manifest's stated blind spot, by construction).
 
-Neither reads the `poison` flag -- only text and retrieval scores.
+None reads the `poison` flag -- only text, source, retrieval score and ingest order.
 
 ponytail: MIN_WORDS=40 sits near the 1st percentile of clean corpus chunk lengths
 (29) but was set after seeing that all 500 poison docs are <= 37 words, so its 100%
@@ -20,15 +27,21 @@ Voting fails once poison is the majority of the top-5 and cuts clean accuracy be
 single chunks often cannot answer alone.
 """
 import os
+import re
 import statistics
 from functools import partial
 
-from attack import DATA, _norm, cached_answer
+from attack import ABSTAIN_TEXT, DATA, _norm, cached_answer
 from rag import load_corpus, text_hash, write_manifest
 
 MIN_WORDS = 40  # provenance: shorter chunks are not ingest-format
 Z_DROP = 1.5  # voting: drop chunks scoring more than this many std above the top-5 mean
 MIN_KEEP = 2  # never filter below this many chunks
+NEARDUP = 0.5  # same-source chunks whose 5-gram containment is at least this are near-duplicates
+# Chosen from CLEAN data only: over all 70,987 same-article genuine pairs the highest containment is 0.243
+# (Jaccard 0.124), so 0.5 is about twice the clean maximum. Cross-article genuine chunks can overlap far
+# more (Darmstadtium/Dubnium 0.978), which is why the test is restricted to one source. test_r2 re-checks it.
+SHINGLE = 5
 
 
 def ingest_filter(docs: list[dict], min_words: int = MIN_WORDS) -> list[dict]:
@@ -59,11 +72,52 @@ def manifest_filter(docs: list[dict]) -> list[dict]:
     return keep or docs  # same fallback as ingest_filter
 
 
+def _shingles(text: str) -> set:
+    w = re.findall(r"\w+", text.lower())
+    return {tuple(w[i:i + SHINGLE]) for i in range(max(len(w) - SHINGLE + 1, 1))}
+
+
+def _near_dup(a: set, b: set) -> bool:
+    """Containment: share of the smaller chunk's phrases found in the other (catches a copy with one fact swapped,
+    and a short doc padded with sentences copied from a genuine chunk)."""
+    return len(a & b) / min(len(a), len(b)) >= NEARDUP
+
+
+def neardup_pairs(docs: list[dict]) -> list[tuple[int, int]]:
+    sh = [_shingles(d["text"]) for d in docs]
+    return [(i, j) for i in range(len(docs)) for j in range(i + 1, len(docs))
+            if docs[i]["source"] == docs[j]["source"] and _near_dup(sh[i], sh[j])]
+
+
+def earliest_filter(docs: list[dict]) -> list[dict]:
+    """Of each group of same-source near-duplicates keep only the earliest-ingested chunk (lowest seq).
+    Survivors come back in the original best-first order.
+
+    ponytail: trusts seq. Index.add stamps it, so a writer that only supplies text and source cannot backdate;
+    an attacker who can forge the stamp (or tamper before ingest, when no earlier original exists) defeats it.
+    Greedy O(n^2) over the 20 candidates.
+    """
+    kept = []
+    for d in sorted(docs, key=lambda d: d["seq"]):
+        s = _shingles(d["text"])
+        if not any(k["source"] == d["source"] and _near_dup(s, ks) for k, ks in kept):
+            kept.append((d, s))
+    keep = {id(k) for k, _ in kept}
+    return [d for d in docs if id(d) in keep]
+
+
+def manifest_preingest_filter(docs: list[dict]) -> list[dict]:
+    """A manifest built after the poison was ingested contains the poison's hash, so every chunk passes."""
+    return docs
+
+
 # graded strength: provNN applies NN% of the full 40-word cutoff; "provenance" is the 100% level
 FILTERS = {
     **{f"prov{pct}": partial(ingest_filter, min_words=MIN_WORDS * pct // 100) for pct in (25, 50, 75)},
     "provenance": ingest_filter,
     "manifest": manifest_filter,
+    "manifest_preingest": manifest_preingest_filter,
+    "earliest": earliest_filter,
 }
 
 
@@ -111,4 +165,12 @@ def defended_answer(cache, question: str, docs: list[dict]) -> str:
     return min((a for _, a in best), key=len)  # shortest phrasing in the winning group
 
 
-DEFENSES = {**{n: _filtered(f) for n, f in FILTERS.items()}, "voting": defended_answer}
+def neardup_answer(cache, question: str, docs: list[dict]) -> str:
+    """Abstain if the 4x over-fetched candidates hold two versions of one passage, else answer from the best 5.
+    Cost: one injected copy is enough to make the question unanswerable (the attack becomes denial of service)."""
+    if neardup_pairs(docs):
+        return ABSTAIN_TEXT
+    return cached_answer(cache, question, docs[:5])
+
+
+DEFENSES = {**{n: _filtered(f) for n, f in FILTERS.items()}, "neardup": neardup_answer, "voting": defended_answer}

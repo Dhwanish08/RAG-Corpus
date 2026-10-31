@@ -2,7 +2,7 @@
     python -X utf8 plots.py
 
 Static light-mode PNGs for the report/README (dataviz skill: categorical slots 1-3, validated all-pairs,
-thin 2px lines, markers with a surface ring, hairline grid, legend + marker shapes, table view in figure_data.md).
+thin 2px lines, markers with a surface ring, hairline grid, legend + marker shapes, leader-line labels, table view in figure_data.md).
 """
 import os
 
@@ -15,9 +15,9 @@ from attack import load_results, summarize  # noqa: E402
 
 OUT = "../figures"
 SURFACE, GRID, AXIS, INK2, MUTED = "#fcfcfb", "#e1e0d9", "#c3c2b7", "#52514e", "#898781"
-BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"  # categorical slots 1-3
+BLUE, ORANGE, AQUA, YELLOW, MAGENTA = "#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4"  # categorical slots 1-5 (slot 5 unused)
 COUNTS = [1, 3, 5, 10]
-DEFENSES = ["none", "prov25", "prov50", "prov75", "provenance", "manifest"]
+DEFENSES = ["none", "prov25", "prov50", "prov75", "provenance", "manifest", "manifest_preingest", "neardup", "earliest"]
 CUTOFF = {"none": 0, "prov25": 10, "prov50": 20, "prov75": 30, "provenance": 40}  # words dropped below
 plt.rcParams.update({"font.family": ["Segoe UI", "DejaVu Sans"], "font.size": 8.5, "axes.facecolor": SURFACE})
 
@@ -66,6 +66,34 @@ def fig_asr(S):
     return fig
 
 
+def fig_tampered(S):
+    """Tampered-copy attacker: attack success and accuracy vs poison count. Provenance is left out (the copies are
+    full length, so it equals no defense; see figure_data.md); manifest and earliest lie on top of each other."""
+    series = [("No defense", "None", "none", BLUE, "o", 13), ("Hash manifest", "Manifest", "manifest", AQUA, "^", 11),
+              ("Near-duplicate, abstain", "Neardup", "neardup", YELLOW, "D", 9), ("Earliest ingest wins", "Earliest", "earliest", MAGENTA, "p", 7)]  # widest first, so coinciding series stay visible
+    fig, axes = plt.subplots(1, 2, figsize=(6.4, 3.1), facecolor=SURFACE)
+    for ax, key, ylabel, title in ((axes[0], "asr", "Attack success rate (%)", "Attack success"), (axes[1], "accuracy", "Accuracy (%)", "Accuracy under attack")):
+        for label, _, d, color, marker, size in series:
+            line(ax, COUNTS, [100 * S[d, c, "tampered"][key] for c in COUNTS], color, marker, label, size)
+        style(ax, "Poison documents injected", ylabel)
+        ax.set_xticks(COUNTS)
+        ax.set_title(title, color=INK2, fontsize=9, loc="left")
+    # direct labels with leader lines (ASR panel): lines converge, so labels sit in the margin at spread heights
+    ax = axes[0]
+    ax.set_xlim(0.5, 14)
+    ends = sorted(((100 * S[d, COUNTS[-1], "tampered"]["asr"], short, color) for _, short, d, color, *_ in series), reverse=True)
+    for (y, short, _), yl in zip(ends, (92, 68, 44, 20)):
+        ax.annotate(short, xy=(COUNTS[-1], y), xytext=(10.9, yl), color=INK2, fontsize=7.5, va="center", annotation_clip=False,
+                    arrowprops=dict(arrowstyle="-", color=AXIS, lw=0.8, shrinkA=0, shrinkB=5))
+    if all(S[d, c, "tampered"]["asr"] == 0 for d in ("manifest", "neardup", "earliest") for c in COUNTS):  # drawn on top of each other
+        ax.text(0.12, 0.14, "Manifest, neardup and\nearliest all at 0%", transform=ax.transAxes, color=INK2, fontsize=8)
+    if all(S["manifest", c, "tampered"]["accuracy"] == S["earliest", c, "tampered"]["accuracy"] for c in COUNTS):
+        axes[1].text(0.6, 0.62, f"Manifest and earliest\nboth at {100 * S['manifest', COUNTS[0], 'tampered']['accuracy']:.0f}%",
+                     transform=axes[1].transAxes, color=INK2, fontsize=8)
+    legend_below(fig, axes[0])
+    return fig
+
+
 def fig_graded(S, count=3):
     """Graded provenance: attack success and clean accuracy as the length cutoff tightens."""
     fig, ax = plt.subplots(figsize=(5.8, 3.2), facecolor=SURFACE)
@@ -82,17 +110,18 @@ def fig_graded(S, count=3):
 
 
 def data_table(S):
-    """Table view of every plotted number (ASR % at 1/3/5/10 poison docs)."""
-    pct = lambda d, st: " / ".join(f"{100 * S[d, c, st]['asr']:.0f}" for c in COUNTS)
-    lines = ["| defense | clean accuracy % | ASR % stub (1/3/5/10 docs) | ASR % padded (1/3/5/10 docs) |", "|---|---|---|---|"]
-    lines += [f"| {d} | {100 * S[d, 0, '-']['accuracy']:.0f} | {pct(d, 'mixed')} | {pct(d, 'padded')} |" for d in DEFENSES]
+    """Table view of every plotted number (percent at 1/3/5/10 poison docs)."""
+    cell = lambda d, st, k: " / ".join(f"{100 * S[d, c, st][k]:.0f}" for c in COUNTS)
+    lines = ["| defense | clean accuracy % | ASR % stub | ASR % padded | ASR % tampered | accuracy % tampered | abstained % tampered |", "|---|---|---|---|---|---|---|"]
+    lines += [f"| {d} | {100 * S[d, 0, '-']['accuracy']:.0f} | {cell(d, 'mixed', 'asr')} | {cell(d, 'padded', 'asr')} | "
+              f"{cell(d, 'tampered', 'asr')} | {cell(d, 'tampered', 'accuracy')} | {cell(d, 'tampered', 'abstain')} |" for d in DEFENSES]
     return "\n".join(lines) + "\n"
 
 
 if __name__ == "__main__":
     S = {(s["defense"], s["count"], s["style"]): s for s in summarize(load_results()) if s["corpus"] == 125}
     os.makedirs(OUT, exist_ok=True)
-    for name, fig in (("asr_vs_poison_count", fig_asr(S)), ("graded_provenance", fig_graded(S))):
+    for name, fig in (("asr_vs_poison_count", fig_asr(S)), ("graded_provenance", fig_graded(S)), ("tampered_attack", fig_tampered(S))):
         path = f"{OUT}/{name}.png"
         fig.savefig(path, dpi=200, facecolor=SURFACE)
         assert os.path.getsize(path) > 10_000, path

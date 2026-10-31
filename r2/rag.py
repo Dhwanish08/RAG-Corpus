@@ -54,16 +54,21 @@ class Index:
     """
 
     def __init__(self, docs: list[dict], vecs: np.ndarray):
-        self.docs = docs  # list of {"text": ..., "source": ..., "poison": bool}
+        # list of {"text": ..., "source": ..., "poison": bool, "seq": int}; seq is the ingest
+        # order, stamped by the index itself (never supplied by whoever writes the doc)
+        self.docs = docs
         self.vecs = vecs  # (n, 384)
 
     @classmethod
     def build(cls, docs: list[dict]) -> "Index":
+        docs = [{**d, "seq": i} for i, d in enumerate(docs)]
         vecs = embed([d["text"] for d in docs])
         return cls(docs, vecs)
 
     def add(self, docs: list[dict]):
-        """Append new docs (e.g. poison) to the live index, in place."""
+        """Append new docs (e.g. poison) to the live index, in place, stamped as ingested after everything already in it."""
+        nxt = max((d["seq"] for d in self.docs), default=-1) + 1
+        docs = [{**d, "seq": nxt + k} for k, d in enumerate(docs)]
         new_vecs = embed([d["text"] for d in docs])
         self.docs = self.docs + docs
         self.vecs = np.vstack([self.vecs, new_vecs])

@@ -15,7 +15,7 @@ import gradio as gr  # noqa: E402
 import pandas as pd  # noqa: E402
 import shelve  # noqa: E402
 
-from attack import CACHE_PATH, DATA, OVERFETCH, ask_one, cached_answer, load_jsonl, load_poison, load_results, match, summarize  # noqa: E402
+from attack import ABSTAIN_TEXT, CACHE_PATH, DATA, OVERFETCH, ask_one, cached_answer, load_jsonl, load_poison, load_results, match, summarize  # noqa: E402
 from defense import DEFENSES, FILTERS  # noqa: E402
 from rag import Index, load_corpus  # noqa: E402
 
@@ -30,6 +30,9 @@ LOCK = threading.Lock()  # dbm cache and the reader are not thread-safe
 DEFENSE_CHOICES = [
     ("Provenance, 40-word cutoff (100%)", "provenance"),
     ("Hash manifest", "manifest"),
+    ("Hash manifest, poison already present at ingest", "manifest_preingest"),
+    ("Near-duplicate detection (abstain)", "neardup"),
+    ("Earliest ingest wins (near-duplicates)", "earliest"),
     ("Provenance 75% (30 words)", "prov75"),
     ("Provenance 50% (20 words)", "prov50"),
     ("Provenance 25% (10 words)", "prov25"),
@@ -40,9 +43,12 @@ def ask(qid: str, count: int, defense: str, attack: str = "stub"):
     row = GOLD[qid]
     fn = cached_answer if defense == "none" else DEFENSES[defense]
     with LOCK:
-        top, gen = ask_one(IDX, row, POISON, CACHE, list(range(int(count))), fn, OVERFETCH.get(defense, 1), pad=attack == "padded")
+        top, gen = ask_one(IDX, row, POISON, CACHE, list(range(int(count))), fn, OVERFETCH.get(defense, 1), style="" if attack == "stub" else attack)
         CACHE.sync()
-    if match(gen, row["attacker_target"]):
+    abstained = gen.startswith(ABSTAIN_TEXT)
+    if abstained:
+        verdict = "🛑 **Abstained** - two versions of the same source were retrieved, so no answer is given."
+    elif match(gen, row["attacker_target"]):
         verdict = "❌ **Attack succeeded** - the answer states the attacker's value."
     elif match(gen, row["correct_answer"], tuple(row.get("aliases", ()))):
         verdict = "✅ **Correct**"
@@ -55,7 +61,8 @@ def ask(qid: str, count: int, defense: str, attack: str = "stub"):
             "score": round(d["score"], 3),
             "source": d["source"],
             "words": len(d["text"].split()),
-            "used": "yes" if id(d) in kept else "dropped by defense",
+            "ingest order": d["seq"],
+            "used": "withheld (abstained)" if abstained else ("yes" if id(d) in kept else "dropped by defense"),
             "poison (hidden from defense)": "POISON" if d["poison"] else "",
             "text": d["text"][:160],
         }
@@ -71,7 +78,7 @@ def results_table():
         {
             "defense": r["defense"], "corpus articles": r["corpus"], "poison docs": r["count"], "style": r["style"],
             "accuracy": f"{r['accuracy']:.0%}", "attack success": f"{r['asr']:.0%}",
-            "poison in top-5": f"{r['poison_retrieval']:.0%}",
+            "poison in top-5": f"{r['poison_retrieval']:.0%}", "abstained": f"{r['abstain']:.0%}",
             "recovery": "-" if r["recovery"] is None else f"{r['recovery']:.0%}",
         }
         for r in rows
@@ -89,7 +96,7 @@ with gr.Blocks(title="RAG poisoning demo") as demo:
         qid = gr.Dropdown([(f"{k}: {v['question']}", k) for k, v in GOLD.items()], value="q003", label="Question", scale=3)
         count = gr.Radio([1, 3, 5, 10], value=3, label="Poison docs to inject", scale=1)
     with gr.Row():
-        attack = gr.Radio([("Short stubs (naive)", "stub"), ("Padded to chunk length (adaptive)", "padded")], value="stub", label="Attacker")
+        attack = gr.Radio([("Short stubs (naive)", "stub"), ("Padded to chunk length (adaptive)", "padded"), ("Tampered copy of a genuine chunk (one fact swapped)", "tampered")], value="stub", label="Attacker")
         defense = gr.Dropdown(DEFENSE_CHOICES, value="provenance", label="Defense")
     with gr.Row():
         b1 = gr.Button("1 · Ask (no poison)")
